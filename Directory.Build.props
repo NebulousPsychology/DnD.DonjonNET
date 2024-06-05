@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+    <PropertyGroup>
+        <TargetFrameworkVersion>net8.0</TargetFrameworkVersion>
+        <LangVersion>preview</LangVersion>
+        <!-- <RunSettingsFilePath>$(SolutionDir)\.runsettings</RunSettingsFilePath> -->
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <Target Name="EmitCustomMessage" AfterTargets="Build">
+        <Message Importance="High" Text="The solution has completed the Build target" />
+    </Target>
+</Project>
