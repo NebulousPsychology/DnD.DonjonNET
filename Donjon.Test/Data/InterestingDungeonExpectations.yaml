@@ -1,0 +1,23 @@
+- Name: one
+  Config:
+    Seed: 12345
+    Size: [39,39]
+    dungeon_layout: None
+    corridor_layout: Bent
+    map_style: Standard
+    remove_deadends: 50
+  Expect:
+    ExpectedDoors: 7
+    PointsOfInterest:
+      [8,30]: "unblessed door"
+      [28,20]: "unblessed door 2"
+      [26,9]: "blessed door between rooms 21,7..25,9 (5@4 s) and  27,7..33,9 (7@6 n)"
+    Rooms:
+      - Id: 1
+        Coord: [[27,17], [29,19]]
+        Area: 9
+      # - Id: 
+      #   Coord: [[,], [,]]
+      #   Area: 
+    Doors: [[6,17],[27,22],[20,7],[26,9],[14,15],[34,9],[14,3],]
+    Stairs: [[17,13],[1,17]]
