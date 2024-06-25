@@ -1,6 +1,5 @@
 // Adapted from https://donjon.bin.sh/code/dungeon/dungeon.pl
 // https://creativecommons.org/licenses/by-nc/3.0/
-using System.Drawing;
 
 namespace Donjon;
 public partial class DungeonGen
