@@ -2322,4 +2322,9 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
 }
 #pragma warning restore IDE1006 // Naming Styles
 
-public enum Cardinal { north, south, east, west }
+public enum Cardinal
+{
+    //north, south, east, west 
+    east, north, south, west
+    //  e,n,s,w
+}
