@@ -1162,6 +1162,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                         {
                             row = door_r,
                             col = door_c,
+                            open_dir=open_dir,
                             key = doorinfo!.Value.key,
                             type = doorinfo!.Value.type,
                             out_id = sill.out_id

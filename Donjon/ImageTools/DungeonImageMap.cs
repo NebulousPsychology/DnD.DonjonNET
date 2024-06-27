@@ -21,7 +21,7 @@ public class DungeonImageMap(ILogger<DungeonImageMap> log, IOptions<ImageMapOpti
     public void DrawDoors(Image map, Dungeon d, bool showSecrets)
     {
         using Image<Rgba32> doorStamp = Image.Load<Rgba32>(options.Value.DoorPath);
-        map.Mutate(a => AddDoors(a, d.door, doorStamp));
+        map.Mutate(ctxt => AddDoors(ctxt, d.door, doorStamp));
 
         void AddDoors(IImageProcessingContext context, IEnumerable<DoorData> doors, Image stamp)
         {
@@ -29,7 +29,7 @@ public class DungeonImageMap(ILogger<DungeonImageMap> log, IOptions<ImageMapOpti
 
             foreach (var d in doors)
             {
-                char dir = 'e';
+                char dir = d.open_dir?.FirstOrDefault() ?? 'e';
                 RotateMode orientation = dir switch
                 {
                     'e' => RotateMode.None,
@@ -38,10 +38,10 @@ public class DungeonImageMap(ILogger<DungeonImageMap> log, IOptions<ImageMapOpti
                     'n' => RotateMode.Rotate270,
                     _ => RotateMode.None,
                 };
+                DrawFromCell(map, [d.Coord],
+                 stampSelector: _ => doorStamp,// rc => doors.Single(door => door.row == rc.row && door.col == rc.col).key switch { },
+                 null, additionalMutation: (mut, rc) => mut.Rotate(orientation)); //? how to write text?
             }
-            DrawFromCell(map, doors.Select(door => door.Coord),
-             stampSelector: _ => doorStamp,// rc => doors.Single(door => door.row == rc.row && door.col == rc.col).key switch { },
-             null, null); //? how to write text?
         }
     }
 
@@ -137,7 +137,8 @@ public class DungeonImageMap(ILogger<DungeonImageMap> log, IOptions<ImageMapOpti
         DrawGrid(mapImage, stamp, dungeon);
 
         DrawDoors(mapImage, dungeon, showSecrets: true);
-
-        mapImage.Save($"test_{nameof(CreateMap)}.jpg"); // Automatic encoder selected based on extension.
+        var filename = Path.GetFullPath($"test_{nameof(CreateMap)}.jpg");
+        log.LogInformation("image at {file}", filename);
+        mapImage.Save(filename); // Automatic encoder selected based on extension.
     }
 }
