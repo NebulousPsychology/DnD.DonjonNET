@@ -8,7 +8,7 @@ namespace Donjon;
 [DebuggerDisplay("{id}, ({north},{west})..({south},{east}), a={area}, {door.Count}door")]
 public struct DungeonRoomStruct : IDungeonRoom
 {
-    public required Dictionary<string, List<DoorData>> door { get; init; }
+    public required Dictionary<Cardinal, List<DoorData>> door { get; init; }
     public int id { get; init; }
     public int north { get; init; }
     public int south { get; init; }

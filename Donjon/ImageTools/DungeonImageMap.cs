@@ -29,13 +29,12 @@ public class DungeonImageMap(ILogger<DungeonImageMap> log, IOptions<ImageMapOpti
 
             foreach (var d in doors)
             {
-                char dir = d.open_dir?.FirstOrDefault() ?? 'e';
-                RotateMode orientation = dir switch
+                RotateMode orientation = d.open_dir switch
                 {
-                    'e' => RotateMode.None,
-                    's' => RotateMode.Rotate90,
-                    'w' => RotateMode.Rotate180,
-                    'n' => RotateMode.Rotate270,
+                   Cardinal.east => RotateMode.None,
+                   Cardinal.south => RotateMode.Rotate90,
+                   Cardinal.west => RotateMode.Rotate180,
+                   Cardinal.north => RotateMode.Rotate270,
                     _ => RotateMode.None,
                 };
                 DrawFromCell(map, [d.Coord],

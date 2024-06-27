@@ -20,7 +20,7 @@ public struct DoorData
     public string type;
     public int? out_id;
     public string? desc;
-    public string? open_dir;
+    public Cardinal open_dir;
     public readonly (int r, int c) Coord => (row, col);
     public readonly bool IsSecret => Enumerable
         .Contains([ "trap", "secret"], key);

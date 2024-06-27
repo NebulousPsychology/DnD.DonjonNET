@@ -7,6 +7,6 @@ public struct Sill
 {
     public int door_r; public int door_c;
     public int sill_r; public int sill_c;
-    public int? out_id; public string dir;
+    public int? out_id; public Cardinal dir;
 }
 #pragma warning restore IDE1006 // Naming Styles
