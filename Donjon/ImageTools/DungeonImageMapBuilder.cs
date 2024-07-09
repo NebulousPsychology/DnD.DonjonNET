@@ -123,17 +123,16 @@ public class DungeonImageMapBuilder(ILogger<DungeonImageMapBuilder> log, IOption
         Func<IImageProcessingContext, (int row, int col), IImageProcessingContext>? additionalMutation = null
         )
     {
-        static double SizeMagnitudeSquared(Size s) => s.Height * s.Height + s.Width * s.Width;
         // Optional mutators fallback to no-op
         additionalMutation ??= (IImageProcessingContext ctxt, (int, int) cell) => ctxt;
         positionPerturb ??= ((int, int) _) => (Size.Empty, Size.Empty, null);
 
         Size tileSize = new(imgSettings.Value.PixelsPerTile);
-        var tileSizeMagSq = SizeMagnitudeSquared(tileSize);
+        var tileSizeMagSq = tileSize.MagnitudeSquared();
         foreach (var c in cells)
         {
             var (deltaPos, deltaCellSize, rectangle) = positionPerturb(c);
-            if (tileSizeMagSq < SizeMagnitudeSquared(deltaPos))
+            if (tileSizeMagSq < deltaPos.MagnitudeSquared())
             {
                 // moving the stamp further than the cell limits is odd
                 log.LogWarning("perturbing {psz}, which exceeds cell {cellsz}", deltaPos, tileSize);

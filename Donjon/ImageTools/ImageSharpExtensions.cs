@@ -10,6 +10,9 @@ public static class ImageSharpExtensions
 
     public static Point Center(this Rectangle value) => value.LocalCenter() + (Size)value.Position();
 
+    public static double MagnitudeSquared(this Size s) => s.Height * s.Height + s.Width * s.Width;
+    public static double Magnitude(this Size s) => Math.Sqrt(s.MagnitudeSquared());
+
     // /// <summary>
     // /// so that the original can be reused
     // /// </summary>
