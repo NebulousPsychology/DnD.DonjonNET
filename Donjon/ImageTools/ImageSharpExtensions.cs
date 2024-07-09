@@ -29,4 +29,31 @@ public static class ImageSharpExtensions
     //         );
     //         return image;
     //     }
+
+    /// <summary>
+    /// Produce a point, using box-muller (3 invocations of randomness)
+    /// </summary>
+    /// <param name="start"></param>
+    /// <param name="random"></param>
+    /// <see>https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform</see>
+    /// <returns></returns>
+    public static PointF NextNormalPointF(this Random random, float scale = 1.0f, bool clamp = false)
+    {
+        float theta = random.NextSingle() * 2 * MathF.PI;
+        float r = MathF.Abs(scale * random.NextNormalF()); // Ensure positive radius
+        r = clamp ? r % scale : r; // when clamping, don't pile up in a line at the edge of the radius, restart from 0
+
+        float x = r * MathF.Cos(theta);
+        float y = r * MathF.Sin(theta);
+
+        return new PointF(x, y);
+    }
+
+    public static float NextNormalF(this Random random)
+    {
+        float u1 = random.NextSingle();
+        float u2 = random.NextSingle();
+        float z = MathF.Sqrt(-2 * MathF.Log(u1)) * MathF.Cos(2 * MathF.PI * u2);
+        return z;
+    }
 }

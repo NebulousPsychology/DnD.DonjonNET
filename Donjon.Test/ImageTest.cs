@@ -9,7 +9,12 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.Extensions;
 
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+
 using Xunit.Abstractions;
+
 public class ImageTest(ITestOutputHelper outputHelper)
 {
     readonly XunitLogger<ImageTest> _xunitLogger = new(outputHelper, LogLevel.Information);
@@ -53,5 +58,76 @@ public class ImageTest(ITestOutputHelper outputHelper)
 
         // Then
         Assert.Fail("for logs");
+    }
+
+    [Theory]
+    [InlineData(20)]
+    [InlineData(200)]
+    [InlineData(02_000)]
+    [InlineData(10_000)]
+    [InlineData(20_000)]
+    public void NormalFuzz(int noise)
+    {
+        // Given
+
+        // prep output raster image
+        using Image<Rgba32> mapImage = new(
+            width: 100, height: 100,
+            backgroundColor: Color.Gray);
+
+        // prep stamp image, in two colors 
+        using Image<Rgba32> errstamp = new(width: 10, height: 10, backgroundColor: Color.Red);
+        errstamp.Mutate(x => x.Vignette(radiusX: 2, radiusY: 2));
+
+        using Image<Rgba32> stamp = new(width: 10, height: 10, backgroundColor: Color.White);
+        stamp.Mutate(x => x.Vignette(radiusX: 2, radiusY: 2));
+
+        // Random r = new(12345);
+        Random r = Random.Shared;
+        float imageradius = MathF.Min(mapImage.Bounds.Height, mapImage.Bounds.Width) * 0.5f ;
+        Assert.Equal(new(100, 100), mapImage.Bounds.Size());
+        // Assert.Equal(25, imageradius);
+
+        var pts = Enumerable.Range(0, noise).Select(i =>
+                    (Point)((PointF)mapImage.Bounds.Center() + r.NextNormalPointF(imageradius,clamp:true )) //*.25f?
+                );
+        Assert.NotEqual(1, pts.Distinct().Count());
+        float eps = mapImage.Bounds.Width * 0.015f;
+        bool inRadius(Point p) => ((Size)(p - (Size)mapImage.Bounds.Center())).Magnitude() <= imageradius+eps;
+
+        // When
+        foreach (Point pt in pts)
+        {
+            bool inImage = mapImage.Bounds.Contains(pt);
+            if (!inImage) _xunitLogger.LogWarning("{pt} out of image bounds", pt);
+
+            // mapImage.Mutate(x => x.Fill()); // https://docs.sixlabors.com/articles/imagesharp.drawing/gettingstarted.html
+            mapImage.Mutate(x => x.DrawImage(inImage ? stamp : errstamp,
+                backgroundLocation: pt - (stamp.Bounds.Size() / 2),
+                opacity: 0.2f,
+                colorBlending: inImage ? (inRadius(pt) ? PixelColorBlendingMode.Add : PixelColorBlendingMode.Subtract) : PixelColorBlendingMode.Add));
+        }
+
+        // Then
+        string filename = Path.GetFullPath($"NormalFuzz_{noise}.bmp");
+        // save
+        _xunitLogger.LogInformation("Save to {file}", filename);
+        mapImage.Save(filename); // Automatic encoder selected based on extension.
+
+
+        var extents = pts.Aggregate(seed: (minX: 0, maxX: 0, minY: 0, maxY: 0),
+        func: (prev, pt) => (
+            minX: Math.Min(prev.minX, pt.X), maxX: Math.Max(prev.maxX, pt.X),
+            minY: Math.Min(prev.minY, pt.Y), maxY: Math.Max(prev.maxY, pt.Y)
+        ));
+        _xunitLogger.LogInformation("extent:{x}", extents);
+
+        int outofRadius = pts.Count(p => !inRadius(p));
+        int outOfImage = pts.Count(p => !mapImage.Bounds.Contains(p));
+        _xunitLogger.LogInformation("outOfImg:{ooi}, inbounds:{x}, outofbounds:{y}", outOfImage, pts.Count() -outofRadius,  outofRadius);
+        Assert.Equal(0, outOfImage);
+        Assert.Equal(0, outofRadius);
+
+        // Assert.Fail("logs");
     }
 }
