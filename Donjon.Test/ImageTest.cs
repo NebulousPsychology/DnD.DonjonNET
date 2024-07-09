@@ -19,7 +19,7 @@ public class ImageTest(ITestOutputHelper outputHelper)
 {
     readonly XunitLogger<ImageTest> _xunitLogger = new(outputHelper, LogLevel.Information);
     [Fact]
-    public void TestName()
+    public void TestMapImageGeneration()
     {
         // Given
         var opts = Substitute.For<IOptions<ImageMapOptions>>();
