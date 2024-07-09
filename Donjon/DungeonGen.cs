@@ -82,13 +82,13 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <remarks><code>
     /// my $di = { 'north' => -1, 'south' =>  1, 'west' =>  0, 'east' =>  0 };
     /// </code></remarks>
-    public static readonly Dictionary<string, int> di = new() { { "north", -1 }, { "south", 1 }, { "west", 0 }, { "east", 0 } };
+    public static readonly Dictionary<Cardinal, int> di = new() { { Cardinal.north, -1 }, { Cardinal.south, 1 }, { Cardinal.west, 0 }, { Cardinal.east, 0 } };
 
     /// <summary>1-step change in COLUMN position for a move to a given direction</summary>
     /// <remarks><code>
     /// my $dj = { 'north' =>  0, 'south' =>  0, 'west' => -1, 'east' =>  1 };
     /// </code></remarks>
-    public static readonly Dictionary<string, int> dj = new() { { "north", 0 }, { "south", 0 }, { "west", -1 }, { "east", 1 } };
+    public static readonly Dictionary<Cardinal, int> dj = new() { { Cardinal.north, 0 }, { Cardinal.south, 0 }, { Cardinal.west, -1 }, { Cardinal.east, 1 } };
 
     /// <summary>
     /// keys of <see cref="dj"/>, sorted: e,n,s,w
@@ -96,7 +96,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <remarks><code>
     /// my @dj_dirs = sort keys %{ $dj };
     /// </code></remarks>
-    public static readonly List<string> dj_dirs = dj.Keys.Order().ToList();
+    public static readonly List<Cardinal> dj_dirs = dj.Keys.Order().ToList();
 
 
     /// <summary>
@@ -111,24 +111,24 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// };
     /// </code></remarks>
     /// <returns></returns>
-    public static readonly Dictionary<string, string> opposite = new(){
-        {"north","south"},
-        {"south","north"},
-        {"west","east"},
-        {"east","west"},
+    public static readonly Dictionary<Cardinal, Cardinal> opposite = new(){
+        {Cardinal.north,Cardinal.south},
+        {Cardinal.south,Cardinal.north},
+        {Cardinal.west,Cardinal.east},
+        {Cardinal.east,Cardinal.west},
     };
 
-    public static readonly Dictionary<string, (int i, int j, string opposite)> directions_allinone = new() {
-        { "north", (i: -1, j: 0, opposite: "south") },
-        { "south", (i: 1, j: 0, opposite: "north") },
-        { "west", (i: 0, j: -1, opposite: "east") },
-        { "east", (i: 0, j: 1, opposite: "west") },
+    public static readonly Dictionary<Cardinal, (int i, int j, Cardinal opposite)> directions_allinone = new() {
+        { Cardinal.north, (i: -1, j: 0, opposite: Cardinal.south) },
+        { Cardinal.south, (i: 1, j: 0, opposite: Cardinal.north) },
+        { Cardinal.west, (i: 0, j: -1, opposite: Cardinal.east) },
+        { Cardinal.east, (i: 0, j: 1, opposite: Cardinal.west) },
     };
 
     #endregion directions
 
     #region stairs
-    public static readonly Dictionary<string, Dictionary<string, ValueTuple<int, int>[]>> stair_end = new(){
+    public static readonly Dictionary<Cardinal, Dictionary<string, ValueTuple<int, int>[]>> stair_end = new(){
         /// my $stair_end = {
         ///   'north' => {
         ///     'walled'    => [[1,-1],[0,-1],[-1,-1],[-1,0],[-1,1],[0,1],[1,1]],
@@ -137,7 +137,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         ///     'next'      => [1,0],
         ///   },
         {
-            "north",
+            Cardinal.north,
             new(){
                 {"walled",[ (1,-1), (0,-1), (-1,-1), (-1,0), (-1,1), (0,1), (1,1), ] },
                 {"corridor",[(0,0),(1,0), (2,0)]},
@@ -151,7 +151,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         ///     'stair'     => [0,0],
         ///     'next'      => [-1,0],
         ///   },
-        {"south",new(){
+        {Cardinal.south,new(){
             ["walled"]    = [(-1,-1),(0,-1),(1,-1),(1,0),(1,1),(0,1),(-1,1)],
             ["corridor"]  = [(0,  0),(-1,0),(-2,0)],
             ["stair"]     = [( 0, 0)],
@@ -163,7 +163,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         ///     'stair'     => [0,0],
         ///     'next'      => [0,1],
         ///   },
-        {"west",new(){
+        {Cardinal.west,new(){
             ["walled"]    = [(-1,1), (-1,0),(-1,-1),(0,-1),(1,-1),(1,0),(1,1)],
             ["corridor"]  = [(0, 0),  (0,1),( 0, 2)],
             ["stair"]     = [(0, 0)],
@@ -176,7 +176,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         ///     'next'      => [0,-1],
         ///   },
         /// };
-        {"east",new(){
+        {Cardinal.east,new(){
             ["walled"]    = [(-1,-1) ,(-1,0),(-1,1),(0,1),(1,1),(1,0),(1,-1)],
             ["corridor"]  = [(0,0)   ,(0,-1),(0,-2)],
             ["stair"]     = [(0,0)],
@@ -185,7 +185,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     };
     #endregion stairs
     #region cleaning
-    public static readonly Dictionary<string, Dictionary<string, ValueTuple<int, int>[]>> close_end = new()
+    public static readonly Dictionary<Cardinal, Dictionary<string, ValueTuple<int, int>[]>> close_end = new()
     {
         /// my $close_end = {
         ///   'north' => {
@@ -193,7 +193,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         ///     'close'     => [[0,0]],
         ///     'recurse'   => [-1,0],
         ///   },
-        ["north"] = new()
+        [Cardinal.north] = new()
         {
             ["walled"] = [(0, -1), (1, -1), (1, 0), (1, 1), (0, 1)],
             ["close"] = [(0, 0)],
@@ -204,7 +204,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         ///     'close'     => [[0,0]],
         ///     'recurse'   => [1,0],
         ///   },
-        ["south"] = new()
+        [Cardinal.south] = new()
         {
             ["walled"] = [(0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1)],
             ["close"] = [(0, 0)],
@@ -215,7 +215,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         ///     'close'     => [[0,0]],
         ///     'recurse'   => [0,-1],
         ///   },
-        ["west"] = new()
+        [Cardinal.west] = new()
         {
             ["walled"] = [(-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0)],
             ["close"] = [(0, 0)],
@@ -227,7 +227,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         ///     'recurse'   => [0,1],
         ///   },
         /// };
-        ["east"] = new()
+        [Cardinal.east] = new()
         {
             ["walled"] = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0)],
             ["close"] = [(0, 0)],
@@ -1127,7 +1127,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                 }
                 var open_r = sill.sill_r;
                 var open_c = sill.sill_c;
-                string open_dir = sill.dir;
+                Cardinal open_dir = sill.dir;
 
                 /// # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 //     # open door
@@ -1162,6 +1162,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                         {
                             row = door_r,
                             col = door_c,
+                            open_dir = open_dir,
                             key = doorinfo!.Value.key,
                             type = doorinfo!.Value.type,
                             out_id = sill.out_id
@@ -1253,7 +1254,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
             {
                 for (int c = room.west; c <= room.east; c += 2) // Note step by 2
                 {
-                    Sill? sill = check_sill(dungeon.cell, room, sill_r: room.north, sill_c: c, "north");
+                    Sill? sill = check_sill(dungeon.cell, room, sill_r: room.north, sill_c: c, Cardinal.north);
                     if (sill.HasValue) list.Add(sill.Value);
                 }
             }
@@ -1261,7 +1262,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
             {
                 for (int c = room.west; c <= room.east; c += 2)
                 {
-                    Sill? sill = check_sill(dungeon.cell, room, sill_r: room.south, sill_c: c, "south");
+                    Sill? sill = check_sill(dungeon.cell, room, sill_r: room.south, sill_c: c, Cardinal.south);
                     if (sill.HasValue) list.Add(sill.Value);
                 }
             }
@@ -1269,7 +1270,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
             {
                 for (int r = room.north; r <= room.south; r += 2)
                 {
-                    Sill? sill = check_sill(dungeon.cell, room, r, room.west, "west");
+                    Sill? sill = check_sill(dungeon.cell, room, r, room.west, Cardinal.west);
                     if (sill.HasValue) list.Add(sill.Value);
                 }
             }
@@ -1277,7 +1278,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
             {
                 for (int r = room.north; r <= room.south; r += 2)
                 {
-                    Sill? sill = check_sill(dungeon.cell, room, r, room.east, "east");
+                    Sill? sill = check_sill(dungeon.cell, room, r, room.east, Cardinal.east);
                     if (sill.HasValue) list.Add(sill.Value);
                 }
             }
@@ -1324,7 +1325,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="sill_c"></param>
     /// <param name="dir"></param>
     /// <returns></returns>
-    Sill? check_sill(Cellbits[,] cell, IDungeonRoom room, int sill_r, int sill_c, string dir)
+    Sill? check_sill(Cellbits[,] cell, IDungeonRoom room, int sill_r, int sill_c, Cardinal dir)
     {
         using (logger.BeginScope(nameof(check_sill)))
         {
@@ -1525,11 +1526,11 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="j">3+2n odd index space col</param>
     /// <param name="lastdir"></param>
     /// <returns></returns>
-    Dungeon tunnel(Dungeon dungeon, int i, int j, string? lastdir = null)
+    Dungeon tunnel(Dungeon dungeon, int i, int j, Cardinal? lastdir = null)
     {
         // using (logger.BeginScope(nameof(tunnel)))
         // {
-        IEnumerable<string> dirs = tunnel_dirs(dungeon, lastdir);
+        IEnumerable<Cardinal> dirs = tunnel_dirs(dungeon, lastdir);
         logger.LogTrace("Tunneling [{dirs}] from indexspace({i},{j})=rowspace({r},{c})",
             string.Join(",", dirs), i, j, i * 2 + 1, j * 2 + 1);
         foreach (var dir in dirs)
@@ -1564,11 +1565,11 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="dungeon"></param>
     /// <param name="last_dir"></param>
     /// <returns>A shuffled series of directions to consider turning</returns>
-    IEnumerable<string> tunnel_dirs(Dungeon dungeon, string? last_dir)
+    IEnumerable<Cardinal> tunnel_dirs(Dungeon dungeon, Cardinal? last_dir)
     {
         using (logger.BeginScope(nameof(tunnel_dirs)))
         {
-            string[] dirs = [.. DungeonGen.dj_dirs];
+            Cardinal[] dirs = [.. DungeonGen.dj_dirs];
             dungeon.random.Shuffle(dirs); // direction keys, but in a random order
 
             if (corridor_layout.TryGetValue(dungeon.corridor_layout, out var pUncurviness))
@@ -1578,7 +1579,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                 {
                     // prepend lastdir to dirs, so we'll address all the directions, but continue an existing direction first
                     // pUncurviness is the percent chance that we WON'T turn, and will continue in the last dierection
-                    return Enumerable.Concat([last_dir], dirs);
+                    return Enumerable.Concat([last_dir.Value], dirs);
                 }
             }
             return dirs.AsEnumerable();
@@ -1612,7 +1613,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="j">oddcol indexspace</param>
     /// <param name="dir"></param>
     /// <returns>true if the <see cref="delve_tunnel"/> occurred</returns>
-    bool open_tunnel(Dungeon dungeon, int i, int j, string dir)
+    bool open_tunnel(Dungeon dungeon, int i, int j, Cardinal dir)
     {
         // using (logger.BeginScope(nameof(open_tunnel)))
         // {
@@ -1875,7 +1876,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                     //       next if ($cell->[$r][$c] & $STAIRS);
                     if (dungeon.cell[r, c].HasAnyFlag(Cellbits.STAIRS)) continue;
 
-                    foreach (string dir in stair_end.Keys)
+                    foreach (Cardinal dir in stair_end.Keys)
                     {
                         if (check_tunnel(dungeon.cell, r, c, stair_end[dir]))
                         {
@@ -1977,7 +1978,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="xc"></param>
     /// <returns></returns>
     Dungeon collapse_tunnels(Dungeon dungeon, double p,
-        Dictionary<string, Dictionary<string, ValueTuple<int, int>[]>> xc)
+        Dictionary<Cardinal, Dictionary<string, ValueTuple<int, int>[]>> xc)
     {
         using (logger.BeginScope(nameof(collapse_tunnels)))
         {
@@ -2032,7 +2033,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $dungeon;
     /// }
     ///</code>
-    Dungeon collapse(Dungeon dungeon, int r, int c, Dictionary<string, Dictionary<string, ValueTuple<int, int>[]>> xc)
+    Dungeon collapse(Dungeon dungeon, int r, int c, Dictionary<Cardinal, Dictionary<string, ValueTuple<int, int>[]>> xc)
     {
         using (logger.BeginScope(nameof(collapse)))
         {
@@ -2044,7 +2045,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                 return dungeon;
             }
 
-            foreach (string dir in xc.Keys)
+            foreach (Cardinal dir in xc.Keys)
             {
                 if (check_tunnel(dungeon.cell, r, c, xc[dir]))
                 {
@@ -2320,3 +2321,10 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         => DescribeDungeon(d, (cel, r, c) => r == i && c == j ? "X" : "•", preamble: false);
 }
 #pragma warning restore IDE1006 // Naming Styles
+
+public enum Cardinal
+{
+    //north, south, east, west 
+    east, north, south, west
+    //  e,n,s,w
+}

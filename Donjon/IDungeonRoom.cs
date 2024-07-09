@@ -16,6 +16,6 @@ public interface IDungeonRoom
     public int width { get; }
     public int area => height * width;
     public int Perimeter => 2 * (height + width);
-    public Dictionary<string, List<DoorData>> door { get; }
+    public Dictionary<Cardinal, List<DoorData>> door { get; }
 }
 #pragma warning restore IDE1006 // Naming Styles
