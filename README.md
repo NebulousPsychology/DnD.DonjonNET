@@ -18,6 +18,7 @@ Donjon's dungeon generator, translated to C#
 ## Features on donjon.bin.sh but not in the perl foundation
 
 TODO: Before implementing dungeon furnishings/loot/monsters from DMG, confirm that content is SRD-ok
+<https://www.5esrd.com/gamemastering/engineering-dungeons/>
 
 - dungeon name
 - monsters, treasure and furnishings based on `party size`, `party level`, `dungeon motif`

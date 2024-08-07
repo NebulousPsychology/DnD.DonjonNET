@@ -1,0 +1,96 @@
+# https://www.5esrd.com/gamemastering/engineering-dungeons/
+dungeon.purpose:
+  1-9: Shelter
+  10-12: Economic
+  13-15: Military
+  16-17: Prison {dungon.purpose.prisoners}
+  18-19: Religious
+  20: Experiment
+
+dungon.purpose.prisoners:
+  1-7: Nonmagical Prisoners
+  8-10: Magical Prisoners
+  11-15: Animals
+  16-17: Monsters
+  18-19: Nonmagical Valuables
+  20: Magical Valuables
+
+dungon.builder:
+  1-6: Intelligent Race ({race.intelligent})
+  8-13: Burrowing Monster
+  14-17: Natural Conditions
+  18: Magic
+  19-20: Combination ({dungeon.builder}/{dungeon.builder})
+
+race.intelligent:
+  1-3: Dwarf
+  4: Gnome
+  5: Goblin
+  6-10: Human
+  11: Kobold
+  12: Giant
+  13: Dragon
+  14: Drow Elf
+  15: Undead
+  16: Prysmal Eye
+  17: Ogre
+  18: Troll
+  19: Halfling
+  20: Orc
+
+dungeon.location:
+  1-10: Terrain {dungeon.location.terrain}
+  11-13: Civilization
+  14-16: Ruins
+  17: Underwater
+  18: Aerial
+  19: Planar
+  20: Combination ({dungeon.location}/{dungeon.location})
+
+dungeon.location.terrain:
+  1-8: Plains
+  9-11: Desert
+  12-14: Hills
+  15-16: Forest
+  17-19: Mountains
+  20: Swamp or Jungle
+
+dungeon.floors: # table 4 (Size)
+  1-8: 1
+  9-13: 2
+  14-16: 3
+  17-19: 4
+  20: 5
+
+dungeon.entrance.known:
+  1-12: Yes
+  13-16: Yes
+  17-19: No
+  20: No
+
+dungeon.entrance:
+  1-12: 1
+  13-16: 2
+  17-19: 3
+  20: 4
+
+dungeon.entrance.hidden:
+  1-12: No
+  13-16: Yes
+  17-19: Yes
+  20: Yes
+
+dungeon.entrance.method:
+  1-12: Door
+  13-16: Shaft
+  17-19: Passage
+  20: Magic
+
+dungeon.age:
+  1-11: 1d4 Millennia
+  12-14: 1d2 Millennia
+  15-16: 2d8 Centuries
+  17-19: 2d4 Decades
+  20: 1d4 Decades
+
+# Drawing the map
