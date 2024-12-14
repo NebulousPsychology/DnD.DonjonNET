@@ -8,10 +8,13 @@ public record Opts
     public long seed = DateTime.Now.Ticks;
 
     /// <remarks>must be odd</remarks
-    public int n_rows = 39;          // must be an odd number
+    public int n_rows { get; init { ArgumentOutOfRangeException.ThrowIfZero(value % 2); field = value; } } = 39;          // must be an odd number
 
-    /// <remarks>must be odd</remarks
-    public int n_cols = 39;          // must be an odd number
+    /// <summary>
+    /// the odd number of columns
+    /// </summary>
+    public int n_cols { get; init { ArgumentOutOfRangeException.ThrowIfZero(value % 2); field = value; } } = 39;          // must be an odd number
+
 
     /// <see cref="DungeonGen.dungeon_layout"/>
     public string dungeon_layout = "None"; // box/cross
