@@ -57,7 +57,6 @@ public class ImageTest(ITestOutputHelper outputHelper)
         i.CreateMap(dungeon, "test_CreateMap_secret.jpg", showSecrets: true);
 
         // Then
-        Assert.Fail("for logs");
     }
 
     [Theory]
@@ -84,16 +83,16 @@ public class ImageTest(ITestOutputHelper outputHelper)
 
         // Random r = new(12345);
         Random r = Random.Shared;
-        float imageradius = MathF.Min(mapImage.Bounds.Height, mapImage.Bounds.Width) * 0.5f ;
+        float imageradius = MathF.Min(mapImage.Bounds.Height, mapImage.Bounds.Width) * 0.5f;
         Assert.Equal(new(100, 100), mapImage.Bounds.Size());
         // Assert.Equal(25, imageradius);
 
         var pts = Enumerable.Range(0, noise).Select(i =>
-                    (Point)((PointF)mapImage.Bounds.Center() + r.NextNormalPointF(imageradius,clamp:true )) //*.25f?
+                    (Point)((PointF)mapImage.Bounds.Center() + r.NextNormalPointF(imageradius, clamp: true)) //*.25f?
                 );
         Assert.NotEqual(1, pts.Distinct().Count());
         float eps = mapImage.Bounds.Width * 0.015f;
-        bool inRadius(Point p) => ((Size)(p - (Size)mapImage.Bounds.Center())).Magnitude() <= imageradius+eps;
+        bool inRadius(Point p) => ((Size)(p - (Size)mapImage.Bounds.Center())).Magnitude() <= imageradius + eps;
 
         // When
         foreach (Point pt in pts)
@@ -124,7 +123,7 @@ public class ImageTest(ITestOutputHelper outputHelper)
 
         int outofRadius = pts.Count(p => !inRadius(p));
         int outOfImage = pts.Count(p => !mapImage.Bounds.Contains(p));
-        _xunitLogger.LogInformation("outOfImg:{ooi}, inbounds:{x}, outofbounds:{y}", outOfImage, pts.Count() -outofRadius,  outofRadius);
+        _xunitLogger.LogInformation("outOfImg:{ooi}, inbounds:{x}, outofbounds:{y}", outOfImage, pts.Count() - outofRadius, outofRadius);
         Assert.Equal(0, outOfImage);
         Assert.Equal(0, outofRadius);
 
