@@ -1,13 +1,12 @@
 namespace Donjon.Test;
 
 using Donjon.ImageTools;
+using Donjon.Test.Utilities;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 using NSubstitute;
-using NSubstitute.Extensions;
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -16,8 +15,8 @@ using SixLabors.ImageSharp.Processing;
 using Xunit.Abstractions;
 
 public class ImageTest(ITestOutputHelper outputHelper)
+:HostedTestBase<ImageTest>(outputHelper)
 {
-    readonly XunitLogger<ImageTest> _xunitLogger = new(outputHelper, LogLevel.Information);
     [Fact]
     public void TestMapImageGeneration()
     {
@@ -49,10 +48,10 @@ public class ImageTest(ITestOutputHelper outputHelper)
         }
 
         // When
-        var g = new DungeonGen(new XunitLogger<DungeonGen>(outputHelper, LogLevel.Information));
+        var g = new DungeonGen(LoggerFactory.CreateLogger<DungeonGen>());
         var dungeon = g.Create_dungeon(new Dungeon { seed = 12345 });
 
-        var i = new DungeonImageMapBuilder(new XunitLogger<DungeonImageMapBuilder>(outputHelper, LogLevel.Trace), opts);
+        var i = new DungeonImageMapBuilder(LoggerFactory.CreateLogger<DungeonImageMapBuilder>(), opts);
         i.CreateMap(dungeon, "test_CreateMap.jpg", showSecrets: false);
         i.CreateMap(dungeon, "test_CreateMap_secret.jpg", showSecrets: true);
 
@@ -98,7 +97,7 @@ public class ImageTest(ITestOutputHelper outputHelper)
         foreach (Point pt in pts)
         {
             bool inImage = mapImage.Bounds.Contains(pt);
-            if (!inImage) _xunitLogger.LogWarning("{pt} out of image bounds", pt);
+            if (!inImage) Logger.LogWarning("{pt} out of image bounds", pt);
 
             // mapImage.Mutate(x => x.Fill()); // https://docs.sixlabors.com/articles/imagesharp.drawing/gettingstarted.html
             mapImage.Mutate(x => x.DrawImage(inImage ? stamp : errstamp,
@@ -110,7 +109,7 @@ public class ImageTest(ITestOutputHelper outputHelper)
         // Then
         string filename = Path.GetFullPath($"NormalFuzz_{noise}.bmp");
         // save
-        _xunitLogger.LogInformation("Save to {file}", filename);
+        Logger.LogInformation("Save to {file}", filename);
         mapImage.Save(filename); // Automatic encoder selected based on extension.
 
 
@@ -119,11 +118,11 @@ public class ImageTest(ITestOutputHelper outputHelper)
             minX: Math.Min(prev.minX, pt.X), maxX: Math.Max(prev.maxX, pt.X),
             minY: Math.Min(prev.minY, pt.Y), maxY: Math.Max(prev.maxY, pt.Y)
         ));
-        _xunitLogger.LogInformation("extent:{x}", extents);
+        Logger.LogInformation("extent:{x}", extents);
 
         int outofRadius = pts.Count(p => !inRadius(p));
         int outOfImage = pts.Count(p => !mapImage.Bounds.Contains(p));
-        _xunitLogger.LogInformation("outOfImg:{ooi}, inbounds:{x}, outofbounds:{y}", outOfImage, pts.Count() - outofRadius, outofRadius);
+        Logger.LogInformation("outOfImg:{ooi}, inbounds:{x}, outofbounds:{y}", outOfImage, pts.Count() - outofRadius, outofRadius);
         Assert.Equal(0, outOfImage);
         Assert.Equal(0, outofRadius);
 

@@ -1,6 +1,8 @@
 
 using System.Text.Json;
 
+using Donjon.Test.Utilities;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -9,9 +11,13 @@ using Xunit.Abstractions;
 namespace Donjon.Test;
 
 public class EntrypointTest(ITestOutputHelper outputHelper)
+: HostedTestBase<EntrypointTest>(outputHelper)
 {
-    readonly XunitLogger<DungeonGen> _xunitLogger = new(outputHelper, LogLevel.Information);
-    readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true, MaxDepth = 20 };
+    readonly JsonSerializerOptions jsonOptions = new()
+    {
+        WriteIndented = true,
+        MaxDepth = 20
+    };
 
     public static IEnumerable<object[]> SplitCountData() { yield break; }
 
@@ -23,17 +29,17 @@ public class EntrypointTest(ITestOutputHelper outputHelper)
     [InlineData("surviving entry/doorway2nothing", 35, 15)]//   seed:35 39x39 csz=18 dunNone corBent nrooms:13 actual:13 last='13' sz(3..9) (surviving Entry)
     public void SpecificSeeds(string concern, int seed, int expectedDoorCount = -1)
     {
-        var g = new DungeonGen(_xunitLogger);
+        var g = new DungeonGen(LoggerFactory.CreateLogger<DungeonGen>());
         Dungeon d = new() { seed = seed, };
         Assert.NotNull(d.cell);
         Assert.NotNull(d.random);
         Assert.Equal(d.n_rows, d.cell.GetLength(0));
         Assert.Equal(d.n_cols, d.cell.GetLength(1));
-        // _xunitLogger.LogInformation("{description}", g.DescribeDungeon(d));
+        // Logger.LogInformation("{description}", g.DescribeDungeon(d));
 
         d = g.Create_dungeon(d);
-        _xunitLogger.LogInformation("{description}", g.DescribeDungeonLite(d));
-        _xunitLogger.LogInformation("{description}", concern);
+        Logger.LogInformation("{description}", g.DescribeDungeonLite(d));
+        Logger.LogInformation("{description}", concern);
 
         // Then
         var indices = Enumerable.Range(0, d.cell.GetLength(0))
@@ -47,8 +53,8 @@ public class EntrypointTest(ITestOutputHelper outputHelper)
         int countDoorsByObject = d.door.Count;
         var indicesNotInObjs = doorIndices.Except(d.door.Select(door => door.Coord)).ToArray();
         var objsNotInIndices = d.door.Select(door => door.Coord).Except(doorIndices).ToArray();
-        _xunitLogger.LogInformation("{c} cells Notin= {a}", indicesNotInObjs.Count(), string.Join(",", indicesNotInObjs));
-        _xunitLogger.LogInformation("{c} objs Notin cells = {a}", objsNotInIndices.Count(), string.Join(",", objsNotInIndices));
+        Logger.LogInformation("{c} cells Notin= {a}", indicesNotInObjs.Count(), string.Join(",", indicesNotInObjs));
+        Logger.LogInformation("{c} objs Notin cells = {a}", objsNotInIndices.Count(), string.Join(",", objsNotInIndices));
 
         Assert.True(countDoorsByCell == countDoorsByObject, $"doors: {countDoorsByCell} cel != {countDoorsByObject} obj");
         Assert.Equal(expectedDoorCount, countDoorsByObject);
@@ -109,19 +115,19 @@ public class EntrypointTest(ITestOutputHelper outputHelper)
             Assert.NotNull(d.random);
             Assert.Equal(d.n_rows, d.cell.GetLength(0));
             Assert.Equal(d.n_cols, d.cell.GetLength(1));
-            _xunitLogger.LogInformation("{description}", g.DescribeDungeon(d));
+            Logger.LogInformation("{description}", g.DescribeDungeon(d));
             try
             {
                 var d2 = g.Create_dungeon(d);
-                _xunitLogger.LogInformation("{description}", g.DescribeDungeonLite(d2));
+                Logger.LogInformation("{description}", g.DescribeDungeonLite(d2));
             }
             catch (Exception exception)
             {
                 interestingOnes.Add(new { exception, seed, });
             }
         }
-        _xunitLogger.LogInformation("seeds tested: [{s}]", string.Join(",", seeds));
-        _xunitLogger.LogInformation(JsonSerializer.Serialize(interestingOnes, options: jsonOptions));
+        Logger.LogInformation("seeds tested: [{s}]", string.Join(",", seeds));
+        Logger.LogInformation(JsonSerializer.Serialize(interestingOnes, options: jsonOptions));
         Assert.Empty(interestingOnes);
     }
 
@@ -137,12 +143,12 @@ public class EntrypointTest(ITestOutputHelper outputHelper)
     {
         // Information[0]<HelloStringScope> info
         // Information[0]<{ hello = object, scope = 2 }>HelloStringScope> info2
-        using (_xunitLogger.BeginScope("HelloStringScope"))
+        using (Logger.BeginScope("HelloStringScope"))
         {
-            _xunitLogger.LogInformation("info");
-            using (_xunitLogger.BeginScope(new { hello = "object", scope = 2 }))
+            Logger.LogInformation("info");
+            using (Logger.BeginScope(new { hello = "object", scope = 2 }))
             {
-                _xunitLogger.LogInformation("info2");
+                Logger.LogInformation("info2");
             }
         }
     }
