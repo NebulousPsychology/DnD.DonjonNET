@@ -28,6 +28,9 @@ public static class CellbitsExtensions
         return false;
     }
     public static Cellbits SetLabel(this Cellbits cell, char c) => cell | (Cellbits)(c << 24);
+
+    /// <summary>determine if any of the bits set in mask are set</summary>
+    /// <returns>true if any of the bits set in mask are set in the current instance; otherwise false</returns>
     public static bool HasAnyFlag(this Cellbits cell, Cellbits mask) => (cell & mask) != 0;
     public static string Summarize(this Cellbits cell, bool emoji = false)
     {
