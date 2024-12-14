@@ -1,5 +1,9 @@
 namespace Donjon.Fractal;
-
+#if NO_UCHAR
+using char_type=char;
+#else
+using char_type=UInt16;
+#endif
 public partial class WorldGen
 {
 
@@ -18,15 +22,15 @@ public partial class WorldGen
  * General DEFINEs
  */
 
-#define BITS    12
+const int BITS=12; // #define BITS    12
 
-#define HSIZE  5003            /* 80% occupancy */
+const int HSIZE=5003; //#define HSIZE  5003            /* 80% occupancy */
 
-#ifdef NO_UCHAR
- typedef char   char_type;
-#else /*NO_UCHAR*/
- typedef        unsigned char   char_type;
-#endif /*NO_UCHAR*/
+//// #ifdef NO_UCHAR
+////  typedef char   char_type;
+//// #else /*NO_UCHAR*/
+////  typedef        unsigned char   char_type;
+//// #endif /*NO_UCHAR*/
 
 /*
  *
@@ -42,25 +46,25 @@ public partial class WorldGen
  *              Joe Orost               (decvax!vax135!petsd!joe)
  *
  */
-#include <ctype.h>
-
-#define ARGVAL() (*++(*argv) || (--argc && *++argv))
-
-static int n_bits;                        /* number of bits/code */
-static int maxbits = BITS;                /* user settable max # bits/code */
-static code_int maxcode;                  /* maximum code, given n_bits */
-static code_int maxmaxcode = (code_int)1 << BITS; /* should NEVER generate this code */
-#ifdef COMPATIBLE               /* But wrong! */
-# define MAXCODE(n_bits)        ((code_int) 1 << (n_bits) - 1)
-#else /*COMPATIBLE*/
-# define MAXCODE(n_bits)        (((code_int) 1 << (n_bits)) - 1)
-#endif /*COMPATIBLE*/
-
-static count_int htab [HSIZE];
-static unsigned short codetab [HSIZE];
-#define HashTabOf(i)       htab[i]
-#define CodeTabOf(i)    codetab[i]
-
+////#include <ctype.h>
+////
+////#define ARGVAL() (*++(*argv) || (--argc && *++argv))
+////
+////static int n_bits;                        /* number of bits/code */
+////static int maxbits = BITS;                /* user settable max # bits/code */
+////static code_int maxcode;                  /* maximum code, given n_bits */
+////static code_int maxmaxcode = (code_int)1 << BITS; /* should NEVER generate this code */
+////#ifdef COMPATIBLE               /* But wrong! */
+////# define MAXCODE(n_bits)        ((code_int) 1 << (n_bits) - 1)
+////#else /*COMPATIBLE*/
+////# define MAXCODE(n_bits)        (((code_int) 1 << (n_bits)) - 1)
+////#endif /*COMPATIBLE*/
+////
+////static count_int htab [HSIZE];
+////static unsigned short codetab [HSIZE];
+////#define HashTabOf(i)       htab[i]
+////#define CodeTabOf(i)    codetab[i]
+////
 static code_int hsize = HSIZE;                 /* for dynamic table sizing */
 
 /*
@@ -85,8 +89,8 @@ static code_int free_ent = 0;                  /* first unused entry */
 static int clear_flg = 0;
 
 static int offset;
-static long int in_count = 1;            /* length of input */
-static long int out_count = 0;           /* # of codes output (for debugging) */
+static long in_count = 1;            /* length of input */
+static long out_count = 0;           /* # of codes output (for debugging) */
 
 /*
  * compress stdin to stdout
@@ -225,17 +229,15 @@ nomatch:
  * code in turn.  When the buffer fills up empty it and start over.
  */
 
-static unsigned long cur_accum = 0;
+static ulong cur_accum = 0;
 static int cur_bits = 0;
 
-static unsigned long masks[] = { 0x0000, 0x0001, 0x0003, 0x0007, 0x000F,
+static ulong[] masks = { 0x0000, 0x0001, 0x0003, 0x0007, 0x000F,
                                   0x001F, 0x003F, 0x007F, 0x00FF,
                                   0x01FF, 0x03FF, 0x07FF, 0x0FFF,
                                   0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF };
 
-static void
-output( code )
-code_int  code;
+static void output(code_int code )
 {
     cur_accum &= masks[ cur_bits ];
 
@@ -295,8 +297,7 @@ code_int  code;
 /*
  * Clear out the hash table
  */
-static void
-cl_block ()             /* table clear for block compress */
+static void cl_block ()             /* table clear for block compress */
 {
 
         cl_hash ( (count_int) hsize );
@@ -306,12 +307,11 @@ cl_block ()             /* table clear for block compress */
         output( (code_int)ClearCode );
 }
 
-static void
-cl_hash(hsize)          /* reset code table */
-register count_int hsize;
+        /* reset code table */
+static void cl_hash(/*register*/ count_int hsize)  
 {
-
-        register count_int *htab_p = htab+hsize;
+        //register
+         count_int *htab_p = htab+hsize;
 
         register long i;
         register long m1 = -1;
@@ -361,8 +361,7 @@ static int a_count;
 /*
  * Set up the 'byte output' routine
  */
-static void
-char_init()
+static void char_init()
 {
         a_count = 0;
 }
@@ -376,9 +375,7 @@ static char accum[ 256 ];
  * Add a character to the end of the current packet, and if it is 254
  * characters, flush the packet to disk.
  */
-static void
-char_out( c )
-int c;
+static void char_out( int c )
 {
         accum[ a_count++ ] = c;
         if( a_count >= 254 )
