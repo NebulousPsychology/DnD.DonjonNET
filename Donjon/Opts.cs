@@ -29,6 +29,7 @@ public record Opts
 
     /// <summary>Bent, Labyrinth, or Straight</summary>
     /// <see cref="DungeonGen.corridor_layout"/>
+    /// <see cref="CorridorLayout"/>
     public string corridor_layout = "Bent"; // or labyrinth, or straight
 
     /// <summary>percent of deadends to remove</summary>

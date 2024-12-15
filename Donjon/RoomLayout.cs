@@ -4,3 +4,9 @@ namespace Donjon;
 
 public enum RoomLayout { Scattered, Packed }
 
+public enum CorridorLayout
+{
+    Labyrinth = 0,
+    Bent = 50,
+    Straight = 100
+}
