@@ -2,7 +2,7 @@
 // https://creativecommons.org/licenses/by-nc/3.0/
 using System.Diagnostics;
 
-namespace Donjon;
+namespace Donjon.Original;
 #pragma warning disable IDE1006 // Naming Styles
 
 [DebuggerDisplay("{id}, ({north},{west})..({south},{east}), a={area}, {door.Count}door")]

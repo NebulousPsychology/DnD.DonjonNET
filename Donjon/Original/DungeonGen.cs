@@ -5,7 +5,7 @@ using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
 
-namespace Donjon;
+namespace Donjon.Original;
 #pragma warning disable IDE1006 // Naming Styles
 
 /// <summary>
