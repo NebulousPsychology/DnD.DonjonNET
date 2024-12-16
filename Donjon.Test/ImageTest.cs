@@ -1,5 +1,6 @@
 namespace Donjon.Test;
 
+using Donjon.Original;
 using Donjon.ImageTools;
 using Donjon.Test.Utilities;
 
