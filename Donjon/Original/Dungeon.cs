@@ -11,20 +11,22 @@ public record Dungeon : Opts
     /// <summary>last room_id issued</summary>
     public int? last_room_id;
 
-    /// <summary>half rows</summary>
+    /// <summary>half rows, will be even by intcast</summary>
     public int n_i => n_rows / 2;
 
-    /// <summary>half cols</summary>
+    /// <summary>half cols, will be even by intcast</summary>
     public int n_j => n_cols / 2;
 
-    /// <summary>inclusive-max index of rows</summary>
+    /// <summary>inclusive-max index of rows (will be even by -1)</summary>
     public int max_row => n_rows - 1;
 
-    /// <summary>inclusive-max index of cols</summary>
+    /// <summary>inclusive-max index of cols (will be even by -1)</summary>
     public int max_col => n_cols - 1;
 
+    /// <summary> (room_min[3] + 1) / 2 </summary>
     public int room_base => (room_min + 1) / 2;
 
+    /// <summary> (room_max[9] - room_min[3]) / 2 + 1 </summary>
     public int room_radix => (room_max - room_min) / 2 + 1;
 
     private readonly Lazy<Cellbits[,]> _cellbits;
@@ -32,7 +34,7 @@ public record Dungeon : Opts
     public Lazy<Random> _random { get; private set; }
     public Random random => _random.Value;
     public Dictionary<string, int>? connect { get; private set; } = [];
-    public Dictionary<object, IDungeonRoom> room { get; private set; } = [];
+    public Dictionary<int, IDungeonRoom> room { get; private set; } = [];
     public List<DoorData> door { get; private set; } = [];
     public List<StairEnd?> stair { get; private set; } = [];
 

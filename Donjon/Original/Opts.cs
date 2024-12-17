@@ -7,7 +7,7 @@ public record Opts
 {
     public long seed = DateTime.Now.Ticks;
 
-    /// <remarks>must be odd</remarks
+    /// <summary>must be odd</summary>
     public int n_rows { get; init { ArgumentOutOfRangeException.ThrowIfZero(value % 2); field = value; } } = 39;          // must be an odd number
 
     /// <summary>
@@ -19,10 +19,10 @@ public record Opts
     /// <see cref="DungeonGen.dungeon_layout"/>
     public string dungeon_layout = "None"; // box/cross
 
-    ///<summary>minimum room size</summary>
+    ///<summary>minimum room size (default: 3)</summary>
     public int room_min = 3;
 
-    ///<summary> maximum room size</summary>
+    ///<summary> maximum room size (default: 9)</summary>
     public int room_max = 9;
 
     public RoomLayout room_layout = RoomLayout.Scattered;

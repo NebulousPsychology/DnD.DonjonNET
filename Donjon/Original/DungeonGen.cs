@@ -409,18 +409,18 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         using (logger.BeginScope(nameof(mask_cells)))
         {
             //* scale the mask coordinates up to dungeon dimensions
-            //   my $r_x = (scalar @{ $mask } * 1.0 / ($dungeon->{'n_rows'} + 1));
+            //::   my $r_x = (scalar @{ $mask } * 1.0 / ($dungeon->{'n_rows'} + 1));
             var r_x = mask.GetLength(0) * 1 / (dungeon.n_rows + 1);
-            //   my $c_x = (scalar @{ $mask->[0] } * 1.0 / ($dungeon->{'n_cols'} + 1));
+            //::   my $c_x = (scalar @{ $mask->[0] } * 1.0 / ($dungeon->{'n_cols'} + 1));
             var c_x = mask.GetLength(1) * 1 / (dungeon.n_cols + 1);//? should transpose getlen index?
 
-            //   my $r; for ($r = 0; $r <= $dungeon->{'n_rows'}; $r++) {
+            //::   my $r; for ($r = 0; $r <= $dungeon->{'n_rows'}; $r++) {
             for (int r = 0; r <= dungeon.n_rows; r++)
             {
-                //     my $c; for ($c = 0; $c <= $dungeon->{'n_cols'}; $c++) {
+                //::     my $c; for ($c = 0; $c <= $dungeon->{'n_cols'}; $c++) {
                 for (int c = 0; c <= dungeon.n_cols; c++)
                 {
-                    //       $cell->[$r][$c] = $BLOCKED unless ($mask->[$r * $r_x][$c * $c_x]);
+                    //::       $cell->[$r][$c] = $BLOCKED unless ($mask->[$r * $r_x][$c * $c_x]);
                     dungeon.cell[r, c] = (mask[r * r_x, c * c_x] != 0) ? dungeon.cell[r, c] : Cellbits.BLOCKED;
                 }
             }
@@ -471,6 +471,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     #endregion initialize cells
 
     #region place rooms
+    /// <summary>place rooms, according to the chosen layout strategy</summary>
     /// <remarks><code>
     /// # emplace rooms
     /// 
@@ -502,6 +503,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     }
 
 
+    /// <summary>room placement strategy, using "Pack": step2 across the dungeon, if a cell is not already a room</summary>
     /// <remarks><code>
     /// sub pack_rooms {
     ///   my ($dungeon) = @_;
@@ -532,16 +534,19 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                 for (int j = 0; j < dungeon.n_j; j++)
                 {
                     var c = 2 * j + 1;
+                    //__ across the dungeon's hemicell space, ...
 
-                    //?       next if ($cell->[$r][$c] & $ROOM);
+                    //::       next if ($cell->[$r][$c] & $ROOM);
                     if (dungeon.cell[r, c].HasFlag(Cellbits.ROOM)) continue;
-                    //?       next if (($i == 0 || $j == 0) && int(rand(2)));
 
                     logger.LogInformation("pack-request: room {i} of {n}, last id={id}", i + 1, dungeon.n_rooms,
                           dungeon.last_room_id?.ToString() ?? "null");
-                    if ((i == 0 || j == 0) && dungeon.random.Next(2) != 0) continue;
 
-                    var proto = (i, j);
+                    //::       next if (($i == 0 || $j == 0) && int(rand(2)));
+                    if ((i == 0 || j == 0) && dungeon.random.Next(2) != 0) continue;
+                    //? why single out 0th row and column for cointoss ?
+
+                    var proto = (i, j); // coordinates in hemicell space
                     dungeon = emplace_room(dungeon, proto);
                 }
             }
@@ -549,7 +554,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         }
     }
 
-
+    /// <summary>room placement strategy: just place the quota of rooms, with no prototups</summary>
     /// <remarks><code>
     /// sub scatter_rooms {
     ///   my ($dungeon) = @_;
@@ -570,7 +575,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
             {
                 logger.LogInformation("scatter-request: room {i} of {n}, last id={id}", i + 1, n,
                       dungeon.last_room_id?.ToString() ?? "null");
-                dungeon = emplace_room(dungeon, null);
+                dungeon = emplace_room(dungeon, prototup: null);
             }
             return dungeon;
         }
@@ -596,7 +601,11 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
         return dungeon_area / room_area;
     }
 
-    /// <summary></summary>
+    /// <summary>
+    /// Place a room
+    /// </summary>
+    /// <param name="dungeon">...</param>
+    /// <param name="prototup"> i,j coordinates in hemicell space:: scatter:null, pack: hemicell;  used in set_room</param>
     /// <remarks><code>
     /// sub emplace_room {
     ///   my ($dungeon,$proto) = @_;
@@ -685,7 +694,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// 
     ///   return $dungeon;
     /// }
-    /// </code></remarks
+    /// </code></remarks>
     Dungeon emplace_room(Dungeon dungeon, (int i, int j)? prototup)
     {
         using (logger.BeginScope($"{nameof(emplace_room)} {prototup?.ToString() ?? "(randomized)"}"))
@@ -697,14 +706,17 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
 
             //   # room boundaries
 
-            //   my $r1 = ( $proto->{'i'}                       * 2) + 1;
-            //   my $c1 = ( $proto->{'j'}                       * 2) + 1;
-            //   my $r2 = (($proto->{'i'} + $proto->{'height'}) * 2) - 1;
-            //   my $c2 = (($proto->{'j'} + $proto->{'width'} ) * 2) - 1;
+            // get the room realspace extents from the hemispace rectangle
+            //::   my $r1 = ( $proto->{'i'}                       * 2) + 1;
+            //::   my $c1 = ( $proto->{'j'}                       * 2) + 1;
+            //::   my $r2 = (($proto->{'i'} + $proto->{'height'}) * 2) - 1;
+            //::   my $c2 = (($proto->{'j'} + $proto->{'width'} ) * 2) - 1;
+            // TODO: set_room could carry the responsibility for converting back to realspace?
             var r1 = (proto["i"] * 2) + 1;
             var c1 = (proto["j"] * 2) + 1;
             var r2 = ((proto["i"] + proto["height"]) * 2) - 1;
             var c2 = ((proto["j"] + proto["width"]) * 2) - 1;
+
             int proposed_room_id = dungeon.n_rooms + 1; //! room_id moved from below
             logger.LogDebug("requesting room [{id}]: {ext}", proposed_room_id, string.Join(",", (object[])[(r1, c1), (r2, c2)]));
 
@@ -715,7 +727,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
             //   # check for collisions with existing rooms
             using (logger.BeginScope("mini:collisiontest"))
             {
-                //   my $hit = &sound_room($dungeon,$r1,$c1,$r2,$c2);
+                //::   my $hit = &sound_room($dungeon,$r1,$c1,$r2,$c2);
                 Dictionary<string, int> hit = sound_room(dungeon, r1, c1, r2, c2);
                 //      return $dungeon if ($hit->{'blocked'});
                 if (hit.ContainsKey("blocked"))
@@ -723,10 +735,10 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                     logger.LogTrace("sounding resulted in block");
                     return dungeon;
                 }
-                //   my @hit_list = keys %{ $hit }; 
-                //   my $n_hits = scalar @hit_list;
+                //::   my @hit_list = keys %{ $hit }; 
+                //::   my $n_hits = scalar @hit_list;
                 int n_hits = hit.Count;
-                //   my $room_id;
+                //::   my $room_id;
                 //! room_id moved outside the logging scope
 
                 if (n_hits == 0)
@@ -742,7 +754,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                 dungeon.last_room_id = proposed_room_id; // The room id is issued
             }
 
-            ///   # emplace room
+            // # emplace room
             using (logger.BeginScope("mini:emplaceroom"))
             {
                 for (int r = r1; r <= r2; r++)
@@ -750,19 +762,18 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                     for (int c = c1; c <= c2; c++)
                     {
                         // remove Entrance marker
-                        //       if ($cell->[$r][$c] & $ENTRANCE) {
-                        if (dungeon.cell[r, c].HasFlag(Cellbits.ENTRANCE))
+                        if (dungeon.cell[r, c].HasFlag(Cellbits.ENTRANCE)) //::       if ($cell->[$r][$c] & $ENTRANCE) {
                         {
                             dungeon.cell[r, c] &= ~Cellbits.ESPACE;
-                        } //       } elsif ($cell->[$r][$c] & $PERIMETER) {
-                        else if (dungeon.cell[r, c].HasFlag(Cellbits.PERIMETER))
+                        }
+                        else if (dungeon.cell[r, c].HasFlag(Cellbits.PERIMETER)) //::       } elsif ($cell->[$r][$c] & $PERIMETER) {
                         {
                             // remove Perimiter marker
                             dungeon.cell[r, c] &= ~Cellbits.PERIMETER;
                         }
 
                         // Add room marker, plus the room Id
-                        //       $cell->[$r][$c] |= $ROOM | ($room_id << 6);
+                        //::       $cell->[$r][$c] |= $ROOM | ($room_id << 6);
                         dungeon.cell[r, c] |= Cellbits.ROOM | (Cellbits)(proposed_room_id << 6);
                     }
                 }
@@ -820,7 +831,6 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     }
 
 
-    /// <summary> room position and size</summary>
     /// <remarks><code>
     /// sub set_room {
     ///   my ($dungeon,$proto) = @_;
@@ -858,59 +868,67 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $proto;
     /// }
     /// </code></remarks>
+    /// <summary>room position and size</summary>
+    /// <returns>
+    ///     a dictionary [i,j,height,width] representing a rectangle in hemispace:
+    ///     where i&j are either the original hemispace coords OR a random hemispace coord that can fit the room
+    ///     FIXME: uncertainty remains on whether this directly maps to Rectangle types
+    /// </returns>
     IDictionary<string, int> set_room(Dungeon dungeon, (int i, int j)? prototuple)
     {
         using (logger.BeginScope(nameof(set_room)))
         {
+            var roomBase = dungeon.room_base;//? even, if room_minmax are obligate odd
+            var roomRadix = dungeon.room_radix; //? odd, if room_minmax are obligate odd
+            int createRadix(int hemicelladdress, int hemicellmax)
+                => Math.Min(roomRadix, Math.Max(0, hemicellmax - roomBase - hemicelladdress));
+#if Original
             Dictionary<string, int> proto = prototuple is null ? [] : new()
             {
                 ["i"] = prototuple.Value.i,
                 ["j"] = prototuple.Value.j,
             };
-            var roomBase = dungeon.room_base;
-            var roomRadix = dungeon.room_radix;
 
-            //   unless (defined $proto->{'height'}) {
+            //::   unless (defined $proto->{'height'}) {
             if (!proto.ContainsKey("height"))
             {
-                if (proto.ContainsKey("i"))
-                {
-                    int a = Math.Max(0, dungeon.n_i - roomBase - proto["i"]);
-                    int r = a < roomRadix ? a : roomRadix;
-
-                    proto.Add("height", dungeon.random.Next(r) + roomBase);
-                }
-                else
-                {
-                    proto.Add("height", dungeon.random.Next(roomRadix) + roomBase);
-                }
-                //? var rdx = proto.ContainsKey("i") ? Math.Min(roomRadix, Math.Max(0, dungeon.n_i - roomBase - (int)proto["i"])) : roomRadix;
-                //? proto.Add("height", dungeon.random.Next(rdx) + roomBase);
+                var rdx = prototuple.HasValue ? fromprototup(prototuple.Value.i, dungeon.n_i) : roomRadix;
+                proto.Add("height", dungeon.random.Next(rdx) + roomBase);
             }
-            //   unless (defined $proto->{'width'}) {
+            //::   unless (defined $proto->{'width'}) {
             if (!proto.ContainsKey("width"))
             {
-                if (proto.ContainsKey("j"))
-                {
-                    int a = Math.Max(0, dungeon.n_j - roomBase - proto["j"]);
-                    int r = Math.Min(a, roomRadix);
-                    proto.Add("width", dungeon.random.Next(r) + roomBase);
-                }
-                else
-                {
-                    proto.Add("width", dungeon.random.Next(roomRadix) + roomBase);
-                }
+                var radx = prototuple.HasValue ? fromprototup(prototuple.Value.j, dungeon.n_j) : roomRadix;
+                proto.Add("width", dungeon.random.Next(radx) + roomBase);
             }
-
-            //   unless (defined $proto->{'i'}) {
-            //     $proto->{'i'} = int(rand($dungeon->{'n_i'} - $proto->{'height'}));
-            //   }
+            //::   unless (defined $proto->{'i'}) {
+            //::     $proto->{'i'} = int(rand($dungeon->{'n_i'} - $proto->{'height'}));
+            //::   }
             _ = proto.TryAdd("i", dungeon.random.Next(dungeon.n_i - proto["height"]));
-            //   unless (defined $proto->{'j'}) {
-            //     $proto->{'j'} = int(rand($dungeon->{'n_j'} - $proto->{'width'}));
-            //   }
+            //::   unless (defined $proto->{'j'}) {
+            //::     $proto->{'j'} = int(rand($dungeon->{'n_j'} - $proto->{'width'}));
+            //::   }
             _ = proto.TryAdd("j", dungeon.random.Next(dungeon.n_j - proto["width"]));
             return proto;
+#else
+            Dictionary<string, int> proto = prototuple is null ? new()
+            {
+                ["height"] = dungeon.random.Next(roomRadix) + roomBase,
+                ["width"] = dungeon.random.Next(roomRadix) + roomBase,
+            } : new()
+            {
+                ["i"] = prototuple.Value.i,
+                ["j"] = prototuple.Value.j,
+                ["height"] = dungeon.random.Next(createRadix(prototuple.Value.i, dungeon.n_i)) + roomBase,
+                ["width"] = dungeon.random.Next(createRadix(prototuple.Value.j, dungeon.n_j)) + roomBase,
+            };
+
+            //__ find a hemispace coordinate that can fit a room of the chosen size
+            _ = proto.TryAdd("i", dungeon.random.Next(dungeon.n_i - proto["height"]));
+            _ = proto.TryAdd("j", dungeon.random.Next(dungeon.n_j - proto["width"]));
+
+            return proto;
+#endif
         }
     }
 
@@ -1869,11 +1887,11 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                 for (int j = 0; j < dungeon.n_j; j++) // lbl COL
                 {
                     int c = j * 2 + 1;
-                    // r,c reconstituted
+                    // r,c reconstituted (as every-other?)
 
-                    //       next unless ($cell->[$r][$c] == $CORRIDOR);
+                    //::       next unless ($cell->[$r][$c] == $CORRIDOR);
                     if (dungeon.cell[r, c] != Cellbits.CORRIDOR) continue;
-                    //       next if ($cell->[$r][$c] & $STAIRS);
+                    //::       next if ($cell->[$r][$c] & $STAIRS);
                     if (dungeon.cell[r, c].HasAnyFlag(Cellbits.STAIRS)) continue;
 
                     foreach (Cardinal dir in stair_end.Keys)
@@ -1885,7 +1903,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
                             end.next_row = end.row + n.Item1;
                             end.next_col = end.col + n.Item2;
 
-                            //           push(@list,$end); next COL;
+                            //::           push(@list,$end); next COL;
                             list.Add(end);
                             break; // out of dir's foreach, continue to next col in for-j
                         }
@@ -1982,22 +2000,22 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     {
         using (logger.BeginScope(nameof(collapse_tunnels)))
         {
-            if (p == 0) return dungeon; //      return $dungeon unless ($p);
-            bool all = 100 == p;
+            if (p is 0) return dungeon; //::      return $dungeon unless ($p);
+            bool all = p is 100;
 
             for (int i = 0; i < dungeon.n_i; i++)
             {
-                int r = 2 * i + 1;
+                int r = i * 2 + 1;
                 for (int j = 0; j < dungeon.n_j; j++)
                 {
                     int c = j * 2 + 1;
 
                     logger.LogTrace("about to collapse ({r},{c})", r, c);
-                    //       next unless ($cell->[$r][$c] & $OPENSPACE);
+                    //::       next unless ($cell->[$r][$c] & $OPENSPACE);
                     if (false == dungeon.cell[r, c].HasAnyFlag(Cellbits.OPENSPACE)) continue;
-                    //       next if ($cell->[$r][$c] & $STAIRS);
+                    //::       next if ($cell->[$r][$c] & $STAIRS);
                     if (dungeon.cell[r, c].HasAnyFlag(Cellbits.STAIRS)) continue;
-                    //       next unless ($all || (int(rand(100)) < $p));
+                    //::       next unless ($all || (int(rand(100)) < $p));
                     if (false == (all || dungeon.random.Next(100) < p)) continue;
 
                     logger.LogTrace("collapse is not preempted for ({r},{c})", r, c);
