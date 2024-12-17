@@ -26,12 +26,15 @@ public record Dungeon : Opts, IDungeon
     /// <summary>inclusive-max index of cols (will be even by -1)</summary>
     public int max_col => n_cols - 1;
 
+    #endregion IDungeonDimensional
+
+    #region RoomSettings-derived
     /// <summary> (room_min[3] + 1) / 2 </summary>
     public int room_base => (room_min + 1) / 2;
 
     /// <summary> (room_max[9] - room_min[3]) / 2 + 1 </summary>
     public int room_radix => (room_max - room_min) / 2 + 1;
-    #endregion IDungeonDimensional
+    #endregion RoomSettings-derived
 
     #region IDungeon
     private readonly Lazy<Cellbits[,]> _cellbits;

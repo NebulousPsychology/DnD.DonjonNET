@@ -27,10 +27,4 @@ public interface IDungeonDimensional
 
     /// <summary>inclusive-max index of cols (will be even by -1)</summary>
     public int max_col { get; }
-
-    /// <summary> (room_min[3] + 1) / 2 </summary>
-    public int room_base { get; }
-
-    /// <summary> (room_max[9] - room_min[3]) / 2 + 1 </summary>
-    public int room_radix { get; }
 }
