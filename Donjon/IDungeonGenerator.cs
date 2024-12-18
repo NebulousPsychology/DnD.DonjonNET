@@ -993,6 +993,32 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
 #endif
         }
     }
+    private Hemispace<Rectangle> set_room(Dungeon dungeon, Hemispace<Point>? prototuple)
+    {
+        using (logger.BeginScope(nameof(set_room)))
+        {
+            var roomBase = dungeon.room_base;//? even, if room_minmax are obligate odd
+            var roomRadix = dungeon.room_radix; //? odd, if room_minmax are obligate odd
+            int createRadix(int hemicelladdress, int hemicellmax)
+                => Math.Min(roomRadix, Math.Max(0, hemicellmax - roomBase - hemicelladdress));
+
+            var radix = prototuple.HasValue is false ? (i: roomRadix, j: roomRadix)
+                : (
+                    i: createRadix(prototuple.Value!.Value.Y, dungeon.n_i),
+                    j: createRadix(prototuple.Value!.Value.X, dungeon.n_j)
+                );
+
+            Size size = new(width: dungeon.random.Next(radix.j) + roomBase,
+                            height: dungeon.random.Next(radix.i) + roomBase);
+
+            Point p = prototuple.HasValue
+                ? new Point(x: prototuple.Value.Value.X, y: prototuple.Value.Value.Y)
+                : new Point(x: dungeon.random.Next(dungeon.n_j - size.Width),
+                            y: dungeon.random.Next(dungeon.n_i - size.Height));
+
+            return new Hemispace<Rectangle>(new Rectangle(p, size));
+        }
+    }
 
     /// <remarks><code>
     /// sub sound_room {
