@@ -16,6 +16,12 @@ public static class CellbitsExtensions
         return false;
     }
 
+    [Obsolete("Untested")]
+    public static void TrySetRoomId(this ref Cellbits cell, int id)
+    {
+        cell |= Cellbits.ROOM | (Cellbits)((id << 6) & (int)Cellbits.ROOM_ID);
+    }
+
     /// <summary>   </summary>
     public static bool TryGetLabel(this Cellbits cell, out byte label)
     {

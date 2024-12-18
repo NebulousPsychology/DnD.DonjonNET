@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Text.Json;
 
 using Donjon.Original;
@@ -76,8 +77,16 @@ class OldGeneratorWrapper(IOptions<Settings> settings, ILoggerFactory loggerFact
 /// # http://creativecommons.org/licenses/by-nc/3.0/
 /// </summary>
 /// <typeparam name="DungeonGenRefactored"></typeparam>
-public partial class DungeonGenRefactored(ILogger<DungeonGenRefactored> logger)
+public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFactory loggerFactory) : IDungeonGenerator
 {
+    private ILogger<DungeonGenRefactored> logger { get; } = loggerFactory?.CreateLogger<DungeonGenRefactored>()
+        ?? NullLogger<DungeonGenRefactored>.Instance;
+    public IDungeonRoomIssuer RoomIssuer => MyRoomIssuer;
+    public RoomIdIssuer MyRoomIssuer { get; } = new RoomIdIssuer(Options.Create(settings.Value.Rooms), Options.Create(settings.Value.Dungeon));
+    public IDungeon Create_dungeon()
+    {
+        throw new NotImplementedException();
+    }
     private static readonly JsonSerializerOptions jsonLoggingOptions = new() { WriteIndented = false };
 
     #region Magic Tables
@@ -590,9 +599,9 @@ public partial class DungeonGenRefactored(ILogger<DungeonGenRefactored> logger)
         {
             for (int i = 0; i < dungeon.n_i; i++)
             {
-                var r = 2 * i + 1;
                 for (int j = 0; j < dungeon.n_j; j++)
                 {
+                    var r = 2 * i + 1;
                     var c = 2 * j + 1;
                     //__ across the dungeon's hemicell space, ...
 
@@ -630,35 +639,13 @@ public partial class DungeonGenRefactored(ILogger<DungeonGenRefactored> logger)
     {
         using (logger.BeginScope(nameof(scatter_rooms)))
         {
-            var n = alloc_rooms(dungeon);
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < MyRoomIssuer.Maximum; i++)
             {
-                logger.LogInformation("scatter-request: room {i} of {n}, last id={id}", i + 1, n,
-                      dungeon.last_room_id?.ToString() ?? "null");
+                logger.LogInformation("scatter-request: room {i} of {n}, last id={id}", i + 1, MyRoomIssuer.Maximum, MyRoomIssuer.last_room_id?.ToString() ?? "null");
                 dungeon = emplace_room(dungeon, prototup: null);
             }
             return dungeon;
         }
-    }
-
-
-    /// <summary> allocate number of rooms based on the ratio of dungeon area:room area   (h*w)/(roommax^2) </summary>
-    /// <remarks><code>
-    /// sub alloc_rooms {
-    ///   my ($dungeon) = @_;
-    ///   my $dungeon_area = $dungeon->{'n_cols'} * $dungeon->{'n_rows'};
-    ///   my $room_area = $dungeon->{'room_max'} * $dungeon->{'room_max'};
-    ///   my $n_rooms = int($dungeon_area / $room_area);
-    /// 
-    ///   return $n_rooms;
-    /// }
-    /// </code></remarks>
-    int alloc_rooms(Dungeon dungeon)
-    {
-        logger.LogTrace(nameof(alloc_rooms));
-        int dungeon_area = dungeon.n_cols * dungeon.n_rows;
-        int room_area = dungeon.room_max * dungeon.room_max;
-        return dungeon_area / room_area;
     }
 
     /// <summary>
@@ -772,124 +759,139 @@ public partial class DungeonGenRefactored(ILogger<DungeonGenRefactored> logger)
             //::   my $r2 = (($proto->{'i'} + $proto->{'height'}) * 2) - 1;
             //::   my $c2 = (($proto->{'j'} + $proto->{'width'} ) * 2) - 1;
             // TODO: set_room could carry the responsibility for converting back to realspace?
-            var r1 = (proto["i"] * 2) + 1;
-            var c1 = (proto["j"] * 2) + 1;
-            var r2 = ((proto["i"] + proto["height"]) * 2) - 1;
-            var c2 = ((proto["j"] + proto["width"]) * 2) - 1;
-
-            int proposed_room_id = dungeon.n_rooms + 1; //! room_id moved from below
-            logger.LogDebug("requesting room [{id}]: {ext}", proposed_room_id, string.Join(",", (object[])[(r1, c1), (r2, c2)]));
+            Realspace<int> r1 = (proto["i"] * 2) + 1;
+            Realspace<int> c1 = (proto["j"] * 2) + 1;
+            Realspace<int> r2 = ((proto["i"] + proto["height"]) * 2) - 1;
+            Realspace<int> c2 = ((proto["j"] + proto["width"]) * 2) - 1;
 
             // if any corner breaks the outermost border, eject
             if (r1 < 1 || r2 > dungeon.max_row) return dungeon;
             if (c1 < 1 || c2 > dungeon.max_col) return dungeon;
 
-            //   # check for collisions with existing rooms
-            using (logger.BeginScope("mini:collisiontest"))
-            {
-                //::   my $hit = &sound_room($dungeon,$r1,$c1,$r2,$c2);
-                Dictionary<string, int> hit = sound_room(dungeon, r1, c1, r2, c2);
-                //      return $dungeon if ($hit->{'blocked'});
-                if (hit.ContainsKey("blocked"))
-                {
-                    logger.LogTrace("sounding resulted in block");
-                    return dungeon;
-                }
-                //::   my @hit_list = keys %{ $hit }; 
-                //::   my $n_hits = scalar @hit_list;
-                int n_hits = hit.Count;
-                //::   my $room_id;
-                //! room_id moved outside the logging scope
-
-                if (n_hits == 0)
-                {
-                    dungeon.n_rooms = proposed_room_id;
-                    logger.LogDebug("Room {r} @[{extents}]: approved because no hits", proposed_room_id, string.Join(",", (object[])[(r1, c1), (r2, c2)]));
-                }
-                else
-                {
-                    logger.LogInformation("Room {r} @[{extents}]: rejected because hits={h} > 0 ", proposed_room_id, string.Join(",", (object[])[(r1, c1), (r2, c2)]), n_hits);
-                    return dungeon;
-                }
-                dungeon.last_room_id = proposed_room_id; // The room id is issued
-            }
+            if (false == emplace_room_collisiontest(dungeon, out int proposed_room_id, r1, c1, r2, c2)) return dungeon;
 
             // # emplace room
-            using (logger.BeginScope("mini:emplaceroom"))
-            {
-                for (int r = r1; r <= r2; r++)
-                {
-                    for (int c = c1; c <= c2; c++)
-                    {
-                        // remove Entrance marker
-                        if (dungeon.cell[r, c].HasFlag(Cellbits.ENTRANCE)) //::       if ($cell->[$r][$c] & $ENTRANCE) {
-                        {
-                            dungeon.cell[r, c] &= ~Cellbits.ESPACE;
-                        }
-                        else if (dungeon.cell[r, c].HasFlag(Cellbits.PERIMETER)) //::       } elsif ($cell->[$r][$c] & $PERIMETER) {
-                        {
-                            // remove Perimiter marker
-                            dungeon.cell[r, c] &= ~Cellbits.PERIMETER;
-                        }
-
-                        // Add room marker, plus the room Id
-                        //::       $cell->[$r][$c] |= $ROOM | ($room_id << 6);
-                        dungeon.cell[r, c] |= Cellbits.ROOM | (Cellbits)(proposed_room_id << 6);
-                    }
-                }
-
-                int cellsize = 1; //! is an alteration vs perl: original specifies 10
-                IDungeonRoom room_data = new DungeonRoomStruct
-                {
-                    id = proposed_room_id,
-                    row = r1,
-                    col = c1,
-                    north = r1,
-                    south = r2,
-                    west = c1,
-                    east = c2,
-                    height = ((r2 - r1) + 1) * cellsize,
-                    width = ((c2 - c1) + 1) * cellsize,
-                    door = [],
-                };
-                dungeon.room[proposed_room_id] = room_data;
-                logger.LogInformation(message: "AddRoom: {r}", JsonSerializer.Serialize(room_data, jsonLoggingOptions));
-            }
+            emplace_room_carve(dungeon, r1, c1, r2, c2, proposed_room_id);
 
             //   # block corridors from room boundary
             //   # check for door openings from adjacent rooms
-            using (logger.BeginScope("mini:block room bound"))
-            {
-                for (int r = r1 - 1; r <= r2 + 1; r++)
-                {
-                    foreach (int horizedgeindex in (IEnumerable<int>)[c1 - 1, c2 + 1])
-                    {
-                        //     unless ($cell->[$r][$c1 - 1] & ($ROOM | $ENTRANCE)) {
-                        if (!dungeon.cell[r, horizedgeindex].HasAnyFlag(Cellbits.ROOM | Cellbits.ENTRANCE)) //! or-entrance is NOT an alteration vs perl!
-                        {
-                            //       $cell->[$r][$cX - 1] |= $PERIMETER;
-                            dungeon.cell[r, horizedgeindex] |= Cellbits.PERIMETER;
-                        }
-                    }
-                }
+            emplace_room_BlockPerimeter(dungeon, r1, c1, r2, c2);
 
-                for (int c = c1 - 1; c <= c2 + 1; c++)
-                {
-                    foreach (int vertedgeindex in (IEnumerable<int>)[r1 - 1, r2 + 1])
-                    {
-                        //     unless ($cell->[$r][$c1 - 1] & ($ROOM | $ENTRANCE)) {
-                        if (!dungeon.cell[vertedgeindex, c].HasAnyFlag(Cellbits.ROOM | Cellbits.ENTRANCE))
-                        {
-                            //       $cell->[$r][$cX - 1] |= $PERIMETER;
-                            dungeon.cell[vertedgeindex, c] |= Cellbits.PERIMETER;
-                        }
-                    }
-                }
-            }// /scope
             return dungeon;
         }
     }
 
+    private void emplace_room_carve(Dungeon dungeon, int r1, int c1, int r2, int c2, int proposed_room_id)
+    {
+        using (logger.BeginScope("mini:emplaceroom"))
+        {
+            for (int r = r1; r <= r2; r++)
+            {
+                for (int c = c1; c <= c2; c++)
+                {
+                    // remove Entrance marker
+                    if (dungeon.cell[r, c].HasFlag(Cellbits.ENTRANCE)) //::       if ($cell->[$r][$c] & $ENTRANCE) {
+                    {
+                        dungeon.cell[r, c] &= ~Cellbits.ESPACE;
+                    }
+                    else if (dungeon.cell[r, c].HasFlag(Cellbits.PERIMETER)) //::       } elsif ($cell->[$r][$c] & $PERIMETER) {
+                    {
+                        // remove Perimiter marker
+                        dungeon.cell[r, c] &= ~Cellbits.PERIMETER;
+                    }
+
+                    // Add room marker, plus the room Id:  make the cell a member of proposedRoomId
+                    //::       $cell->[$r][$c] |= $ROOM | ($room_id << 6);
+                    //// dungeon.cell[r, c] |= Cellbits.ROOM | (Cellbits)(proposed_room_id << 6);
+                    dungeon.cell[r, c].TrySetRoomId(proposed_room_id);
+                }
+            }
+
+            int cellsize = 1; //! is an alteration vs perl: original specifies 10
+            IDungeonRoom room_data = new DungeonRoomStruct
+            {
+                id = proposed_room_id,
+                row = r1,
+                col = c1,
+                north = r1,
+                south = r2,
+                west = c1,
+                east = c2,
+                height = ((r2 - r1) + 1) * cellsize,
+                width = ((c2 - c1) + 1) * cellsize,
+                door = [],
+            };
+            dungeon.room[proposed_room_id] = room_data;
+            logger.LogInformation(message: "AddRoom: {r}", JsonSerializer.Serialize(room_data, jsonLoggingOptions));
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="dungeon">context</param>
+    /// <param name="proposed_room_id">room id, if a new room gets issued</param>
+    /// <param name="r">a realspace region, enclosing the coordinates of the proposed room</param>
+    /// <returns>true if a new room was issued</returns>
+    bool emplace_room_collisiontest(IDungeon dungeon, out int proposed_room_id, Rectangle r)
+    {
+        return emplace_room_collisiontest(dungeon, out proposed_room_id, r.Top, r.Left, r.Bottom, r.Right);
+    }
+    bool emplace_room_collisiontest(IDungeon dungeon, out int proposed_room_id, int r1, int c1, int r2, int c2)
+    {
+        //   # check for collisions with existing rooms
+        using (logger.BeginScope("mini:collisiontest"))
+        {
+            Dictionary<string, int> hit = sound_room(dungeon, r1, c1, r2, c2);
+            if (hit.ContainsKey("blocked"))
+            {
+                logger.LogTrace("sounding resulted in block");
+                proposed_room_id = -1;
+                return false;
+            }
+
+            int n_hits = hit.Count;
+            if (n_hits == 0)
+            {
+                logger.LogDebug("Room {r} @[{extents}]: approved because no hits", MyRoomIssuer.Current, string.Join(",", (object[])[(r1, c1), (r2, c2)]));
+                return MyRoomIssuer.TryIssueRoom(out proposed_room_id) ? true : throw new Exception($"Ran out of rooms? {MyRoomIssuer.Current}");
+            }
+            else
+            {
+                logger.LogInformation("Room {r} @[{extents}]: rejected because hits={h} > 0 ", MyRoomIssuer.Current, string.Join(",", (object[])[(r1, c1), (r2, c2)]), n_hits);
+                proposed_room_id = -1;
+                return false;
+            }
+        }
+    }
+    /// <summary>
+    /// block corridors from room boundary; check for door openings from adjacent rooms
+    /// </summary>
+    /// <param name="dungeon"></param>
+    void emplace_room_BlockPerimeter(IDungeon dungeon, Realspace<int> r1, Realspace<int> c1, Realspace<int> r2, Realspace<int> c2)
+    {
+        void tx(int r, int c)
+        {
+            if (!dungeon.cell[r, c].HasAnyFlag(Cellbits.ROOM | Cellbits.ENTRANCE)) //! or-entrance is NOT an alteration vs perl!
+            {
+                dungeon.cell[r, c] |= Cellbits.PERIMETER;
+            }
+        }
+        using (logger.BeginScope("mini:block room bound"))
+        {
+            for (int r = r1 - 1; r <= r2 + 1; r++) // note: 1-cell outset
+            {
+                tx(r, c1 - 1);
+                tx(r, c2 + 1);
+            }
+
+            for (int c = c1 - 1; c <= c2 + 1; c++)
+            {
+                tx(r1 - 1, c);
+                tx(r2 + 1, c);
+            }
+        }// /scope
+    }
 
     /// <remarks><code>
     /// sub set_room {
@@ -1012,7 +1014,15 @@ public partial class DungeonGenRefactored(ILogger<DungeonGenRefactored> logger)
     ///   return $hit;
     /// }
     /// </code></remarks>
-    Dictionary<string, int> sound_room(Dungeon dungeon, int r1, int c1, int r2, int c2)
+    /// <summary>test cells in the inclusive region. 
+    /// if any are blocked, set a return flag. 
+    /// if any belong to a designated room, produce a count of how many per room</summary>
+    /// <remarks>
+    /// {
+    /// blocked=1
+    /// }
+    /// </remarks>
+    Dictionary<string, int> sound_room(IDungeon dungeon, int r1, int c1, int r2, int c2)
     {
         using (logger.BeginScope(nameof(sound_room)))
         {

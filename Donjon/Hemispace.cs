@@ -4,6 +4,13 @@ using SixLabors.ImageSharp;
 
 namespace Donjon;
 
+public struct Realspace<T>(T value)
+{
+    public T Value { get; set; } = value;
+    public static implicit operator T(Realspace<T> d) => d.Value;
+    public static implicit operator Realspace<T>(T d) => new(d);
+}
+
 public struct Hemispace<T>(T value)
 {
     public T Value { get; set; } = value;
