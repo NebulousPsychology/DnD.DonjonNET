@@ -11,6 +11,12 @@ public record Dungeon : Opts, IDungeon
 
     /// <summary>last room_id issued</summary>
     public int? last_room_id { get; set; } = null;
+    public bool TryIssueRoom(out int id)
+    {
+        last_room_id = n_rooms;
+        id = ++n_rooms;
+        return true;
+    }
     #endregion IDungeonRoomIssuer
 
     #region IDungeonDimensional
