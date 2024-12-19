@@ -1,4 +1,3 @@
-using System.Drawing;
 using System.Text.Json;
 
 using Donjon.Original;
@@ -6,6 +5,8 @@ using Donjon.Original;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+
+using SixLabors.ImageSharp;
 
 namespace Donjon;
 
@@ -322,32 +323,6 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     #endregion imaging
     #endregion
 
-    #region showtime
-    /// my $opts = &get_opts();
-    /// my $dungeon = &create_dungeon($opts);
-    ///    &image_dungeon($dungeon);
-    #endregion showtime
-
-    #region get dungeon options
-    /// sub get_opts {
-    ///   my $opts = {
-    ///     'seed'              => time(),
-    ///     'n_rows'            => 39,          # must be an odd number
-    ///     'n_cols'            => 39,          # must be an odd number
-    ///     'dungeon_layout'    => 'None',
-    ///     'room_min'          => 3,           # minimum room size
-    ///     'room_max'          => 9,           # maximum room size
-    ///     'room_layout'       => 'Scattered', # Packed, Scattered
-    ///     'corridor_layout'   => 'Bent',
-    ///     'remove_deadends'   => 50,          # percentage
-    ///     'add_stairs'        => 2,           # number of stairs
-    ///     'map_style'         => 'Standard',
-    ///     'cell_size'         => 18,          # pixels
-    ///   };
-    ///   return $opts;
-    /// }
-    #endregion get dungeon options
-
     #region create dungeon
 
     /// <remarks> <code>
@@ -458,6 +433,12 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
         }
     }
 
+    /// <summary>
+    /// stretching <paramref name="mask"/> to fit the cell field, apply mask as BLOCKED
+    /// </summary>
+    /// <param name="dungeon"></param>
+    /// <param name="mask"></param>
+    /// <returns></returns>
     /// <remarks> <code>
     /// sub mask_cells {
     ///   my ($dungeon,$mask) = @_;
@@ -478,15 +459,13 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
         using (logger.BeginScope(nameof(mask_cells)))
         {
             //* scale the mask coordinates up to dungeon dimensions
-            //::   my $r_x = (scalar @{ $mask } * 1.0 / ($dungeon->{'n_rows'} + 1));
-            var r_x = mask.GetLength(0) * 1 / (dungeon.n_rows + 1);
-            //::   my $c_x = (scalar @{ $mask->[0] } * 1.0 / ($dungeon->{'n_cols'} + 1));
-            var c_x = mask.GetLength(1) * 1 / (dungeon.n_cols + 1);//? should transpose getlen index?
+            var r_x = mask.GetLength(0) * 1 / (dungeon.n_rows + 1); //::   my $r_x = (scalar @{ $mask } * 1.0 / ($dungeon->{'n_rows'} + 1));
+            var c_x = mask.GetLength(1) * 1 / (dungeon.n_cols + 1); //::   my $c_x = (scalar @{ $mask->[0] } * 1.0 / ($dungeon->{'n_cols'} + 1));
+            //? should transpose getlen index?
 
-            //::   my $r; for ($r = 0; $r <= $dungeon->{'n_rows'}; $r++) {
+            //RASTER: REALSPACE: INCLUSIVE <0,0>..<nrows,ncols>
             for (int r = 0; r <= dungeon.n_rows; r++)
             {
-                //::     my $c; for ($c = 0; $c <= $dungeon->{'n_cols'}; $c++) {
                 for (int c = 0; c <= dungeon.n_cols; c++)
                 {
                     //::       $cell->[$r][$c] = $BLOCKED unless ($mask->[$r * $r_x][$c * $c_x]);
@@ -497,6 +476,9 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
         }
     }
 
+    /// <summary>
+    /// Mark any cell outside a circle as BLOCKED
+    /// </summary>
     /// <remarks> <code>
     /// sub round_mask {
     ///   my ($dungeon) = @_;
@@ -517,18 +499,13 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     {
         using (logger.BeginScope(nameof(round_mask)))
         {
-            //   my $center_r = int($dungeon->{'n_rows'} / 2);
-            //   my $center_c = int($dungeon->{'n_cols'} / 2);
             var centerOfMap = (r: dungeon.n_rows / 2, c: dungeon.n_cols / 2);
-            //   my $cell = $dungeon->{'cell'};
 
-            //   my $r; for ($r = 0; $r <= $dungeon->{'n_rows'}; $r++) {
-            //     my $c; for ($c = 0; $c <= $dungeon->{'n_cols'}; $c++) {
+            //RASTER: REALSPACE: INCLUSIVE <0,0>..<nrows,ncols>
             for (int r = 0; r <= dungeon.n_rows; r++)
             {
                 for (int c = 0; c <= dungeon.n_cols; c++)
                 {
-                    //       my $d = sqrt((($r - $center_r) ** 2) + (($c - $center_c) ** 2));
                     var radius = Math.Sqrt(Math.Pow(r - centerOfMap.r, 2) + Math.Pow(c - centerOfMap.c, 2));
                     //       $cell->[$r][$c] = $BLOCKED if ($d > $center_c);
                     dungeon.cell[r, c] = (radius > centerOfMap.c) ? Cellbits.BLOCKED : dungeon.cell[r, c];
@@ -597,6 +574,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     {
         using (logger.BeginScope(nameof(pack_rooms)))
         {
+            //RASTER: HEMI: EXCLUSIVE <0,0>..<nrows/2,ncols/2>
             for (int i = 0; i < dungeon.n_i; i++)
             {
                 for (int j = 0; j < dungeon.n_j; j++)
@@ -748,6 +726,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
         {
             if (dungeon.n_rooms == 999) return dungeon;
 
+            //RASTER: (prototup,if any, comes from a...) HEMI: EXCLUSIVE <0,0>..<nrows/2,ncols/2>
             // # room position and size
             var proto = set_room(dungeon, prototup);
 
@@ -785,6 +764,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     {
         using (logger.BeginScope("mini:emplaceroom"))
         {
+            //RASTER: INCLUSIVE <r1,c1>..<r2,c2>
             for (int r = r1; r <= r2; r++)
             {
                 for (int c = c1; c <= c2; c++)
@@ -801,7 +781,6 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
                     }
 
                     // Add room marker, plus the room Id:  make the cell a member of proposedRoomId
-                    //::       $cell->[$r][$c] |= $ROOM | ($room_id << 6);
                     //// dungeon.cell[r, c] |= Cellbits.ROOM | (Cellbits)(proposed_room_id << 6);
                     dungeon.cell[r, c].TrySetRoomId(proposed_room_id);
                 }
@@ -839,6 +818,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     }
     bool emplace_room_collisiontest(IDungeon dungeon, out int proposed_room_id, int r1, int c1, int r2, int c2)
     {
+        //RASTER: (coords,if any, comes from a...) HEMI: EXCLUSIVE <0,0>..<nrows/2,ncols/2>
         //   # check for collisions with existing rooms
         using (logger.BeginScope("mini:collisiontest"))
         {
@@ -879,6 +859,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
         }
         using (logger.BeginScope("mini:block room bound"))
         {
+            //RASTER: REALSPACE: INCLUSIVE INFLATED <r1-1,c1-1>..<r2+1,c2+1>
             for (int r = r1 - 1; r <= r2 + 1; r++) // note: 1-cell outset
             {
                 tx(r, c1 - 1);
@@ -973,6 +954,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
             _ = proto.TryAdd("j", dungeon.random.Next(dungeon.n_j - proto["width"]));
             return proto;
 #else
+            //RASTER: (prototup,if any, comes from a...) HEMI: EXCLUSIVE <0,0>..<ni=nrows/2,nj=ncols/2>
             Dictionary<string, int> proto = prototuple is null ? new()
             {
                 ["height"] = dungeon.random.Next(roomRadix) + roomBase,
@@ -995,6 +977,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     }
     private Hemispace<Rectangle> set_room(Dungeon dungeon, Hemispace<Point>? prototuple)
     {
+        //RASTER: (prototup,if any, comes from a...) HEMI: EXCLUSIVE <0,0>..<ni=nrows/2,nj=ncols/2>
         using (logger.BeginScope(nameof(set_room)))
         {
             var roomBase = dungeon.room_base;//? even, if room_minmax are obligate odd
@@ -1054,6 +1037,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
         {
             Dictionary<string, int> hit = [];
 
+            //RASTER: REALSPACE: INCLUSIVE <r1,c1>..<r2,c2>
             for (int r = r1; r <= r2; r++)
             {
                 for (int c = c1; c <= c2; c++)
@@ -1238,7 +1222,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
                 //     # open door
                 using (logger.BeginScope("OpenDoor"))
                 {
-                    for (int x = 0; x < 3; x++)
+                    for (int x = 0; x < 3; x++)// len 4
                     {
                         int r = open_r + (di[open_dir] * x);
                         int c = open_c + (dj[open_dir] * x);
@@ -1430,7 +1414,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     /// <param name="sill_c"></param>
     /// <param name="dir"></param>
     /// <returns></returns>
-    Sill? check_sill(Cellbits[,] cell, IDungeonRoom room, int sill_r, int sill_c, Cardinal dir)
+    Sill? check_sill(Cellbits[,] cell, IDungeonRoom room, Realspace<int> sill_r, Realspace<int> sill_c, Cardinal dir)
     {
         using (logger.BeginScope(nameof(check_sill)))
         {
@@ -1584,13 +1568,14 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
             //! For Odd-numbered rows and columns, starting at 3,3.  
             //! To this end, ij-indexspace is halfgrid, scaled and offset to return to rowspace
 
-            // from 1,1 to n_i-1,n_j-1, inclusive
-            for (int i = 1; i < dungeon.n_i; i++)
+            //RASTER: HEMI: INCLUSIVE INSET <1,1>..<ni=nrows/2-1 (odd),nj=ncols/2-1 (odd)>
+            for (Hemispace<int> i = new(1); i.Value < dungeon.n_i; i.Value++)
             {
                 for (int j = 1; j < dungeon.n_j; j++)
                 {
-                    int r = i * 2 + 1;
-                    int c = j * 2 + 1;
+                    // from 1,1 to n_i-1,n_j-1, inclusive
+                    Realspace<int> r = i.Value * 2 + 1;
+                    Realspace<int> c = j * 2 + 1;
                     logger.LogDebug(1, "Consider tunnling from ({r},{c})", r, c);
                     if (dungeon.cell[r, c].HasAnyFlag(Cellbits.CORRIDOR)) // if we see Corridor, we already tunneled at [r,c]
                     {
@@ -1598,7 +1583,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
                     }
                     logger.LogDebug(2, "About to tunnel from ({r},{c}) because it isn't CORRIDOR", r, c);
                     // ? but then we snap back into index-space?
-                    dungeon = tunnel(dungeon, i, j);
+                    dungeon = tunnel(dungeon, i.Value, j);
                     logger.LogInformation(3, "Finished a Tunnel from {fn}! \nnew map:{map}",
                         nameof(corridors), DescribeDungeonLite(dungeon));
                 }
@@ -1635,6 +1620,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     {
         // using (logger.BeginScope(nameof(tunnel)))
         // {
+        //RASTER: i,j from HEMI: INCLUSIVE INSET <1,1>..<ni=nrows/2-1 (odd),nj=ncols/2-1 (odd)>
         IEnumerable<Cardinal> dirs = tunnel_dirs(dungeon, lastdir);
         logger.LogTrace("Tunneling [{dirs}] from indexspace({i},{j})=rowspace({r},{c})",
             string.Join(",", dirs), i, j, i * 2 + 1, j * 2 + 1);
@@ -1720,8 +1706,9 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     /// <returns>true if the <see cref="delve_tunnel"/> occurred</returns>
     bool open_tunnel(Dungeon dungeon, int i, int j, Cardinal dir)
     {
-        // using (logger.BeginScope(nameof(open_tunnel)))
-        // {
+        //RASTER: i,j from HEMI: INCLUSIVE INSET <1,1>..<ni=nrows/2-1 (odd),nj=ncols/2-1 (odd)>
+        //:: using (logger.BeginScope(nameof(open_tunnel)))
+        //:: {
         // find the current rowspace coordinate
         // r and c will be odd
         (int r, int c) curr = (i * 2 + 1, j * 2 + 1);
@@ -1729,10 +1716,10 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
         (int r, int c) next = ((i + di[dir]) * 2 + 1, (j + dj[dir]) * 2 + 1);
         // two steps in indicated direction, +one,one
         // the rowspace coordinate between them (because it's a single odd-row increment, the middle should be on the even)
-        (int r, int c) mid = ((curr.r + next.r) / 2, (curr.c + next.c) / 2);
+        (int r, int c) mid = ((curr.r + next.r) / 2, (curr.c + next.c) / 2); // it looks like a tohemi, but it's a midpoint
 
         return sound_tunnel(dungeon, mid.r, mid.c, next.r, next.c) && delve_tunnel(dungeon, curr.r, curr.c, next.r, next.c);
-        // } // /scope
+        //:: } // /scope
     }
 
     /// <summary>
@@ -1767,6 +1754,8 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
         using (logger.BeginScope(nameof(sound_tunnel)))
         {
             // reject the proposed tunnel if the destination cell is out of bounds
+
+            //RASTER: REAL: FILTER <nr,nc> in [<0,0>..<nrows,ncols>)
             if (next_r < 0 || next_r >= dungeon.n_rows) return false;
             if (next_c < 0 || next_c >= dungeon.n_cols) return false;
 
@@ -1776,6 +1765,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
             int r2 = Math.Max(mid_r, next_r);
             int c2 = Math.Max(mid_c, next_c);
 
+            //RASTER:new REAL: INCLUSIVE <r1,c1>..<r2,c2>
             for (int r = r1; r <= r2; r++)
             {
                 for (int c = c1; c <= c2; c++)
@@ -1829,6 +1819,8 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
             int c1 = Math.Min(this_c, next_c);
             int r2 = Math.Max(this_r, next_r);
             int c2 = Math.Max(this_c, next_c);
+
+            //RASTER: REAL: INCLUSIVE <r1,c1>..<r2,c2>
             for (int r = r1; r <= r2; r++)
             {
                 for (int c = c1; c <= c2; c++)
@@ -1893,7 +1885,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
             if (list is null) return dungeon;
 
             if (list.Count != n) logger.LogDebug("Select {n} stairs from list of {list}", n, list.Count);
-            for (int i = 0; i < n && i < list.Count; i++) //   my $i; for ($i = 0; $i < $n; $i++) {
+            for (int stairIndex = 0; stairIndex < n && stairIndex < list.Count; stairIndex++) //   my $i; for ($i = 0; $i < $n; $i++) {
             {
                 //     my $stair = splice(@list,int(rand(@list)),1);
                 //? randselect an element of list ,remove, and assign to stair
@@ -1906,7 +1898,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
 
                 (int r, int c) = (stair.row, stair.col);
 
-                var type = i < 2 ? i : dungeon.random.Next(2);
+                var type = stairIndex < 2 ? stairIndex : dungeon.random.Next(2);
                 (char label, Cellbits direction, string key) stairtuple = type switch
                 {
                     0 => ('d', Cellbits.STAIR_DN, "down"),
@@ -1968,13 +1960,14 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
             List<StairEnd?> list = [];
 
             //? rowspace/indexspace to enforce odd row/col
+            //RASTER: HEMI: EXCLUSIVE-high [<0,0>..<ni=nrows/2(E),nj=ncols/2(E)>)
             for (int i = 0; i < dungeon.n_i; i++) // lbl ROW
             {
-                int r = i * 2 + 1;
                 for (int j = 0; j < dungeon.n_j; j++) // lbl COL
                 {
+                    int r = i * 2 + 1;
                     int c = j * 2 + 1;
-                    // r,c reconstituted (as every-other?)
+                    // r,c reconstituted (as every-other? odd)
 
                     //::       next unless ($cell->[$r][$c] == $CORRIDOR);
                     if (dungeon.cell[r, c] != Cellbits.CORRIDOR) continue;
@@ -2090,27 +2083,25 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
             if (p is 0) return dungeon; //::      return $dungeon unless ($p);
             bool all = p is 100;
 
-            for (int i = 0; i < dungeon.n_i; i++)
+            //RASTER: HEMI: ExCLUSIVE High  [<0,0> .. <ni=nrows/2-1(o),nj=ncols/2-1(o)]
+            foreach (var (i, j) in Dim2d.RangeInclusive(0, dungeon.n_i - 1, 0, dungeon.n_j - 1))
             {
                 int r = i * 2 + 1;
-                for (int j = 0; j < dungeon.n_j; j++)
-                {
-                    int c = j * 2 + 1;
+                int c = j * 2 + 1;
 
-                    logger.LogTrace("about to collapse ({r},{c})", r, c);
-                    //::       next unless ($cell->[$r][$c] & $OPENSPACE);
-                    if (false == dungeon.cell[r, c].HasAnyFlag(Cellbits.OPENSPACE)) continue;
-                    //::       next if ($cell->[$r][$c] & $STAIRS);
-                    if (dungeon.cell[r, c].HasAnyFlag(Cellbits.STAIRS)) continue;
-                    //::       next unless ($all || (int(rand(100)) < $p));
-                    if (false == (all || dungeon.random.Next(100) < p)) continue;
+                logger.LogTrace("about to collapse ({r},{c})", r, c);
+                //::       next unless ($cell->[$r][$c] & $OPENSPACE);
+                if (false == dungeon.cell[r, c].HasAnyFlag(Cellbits.OPENSPACE)) continue;
+                //::       next if ($cell->[$r][$c] & $STAIRS);
+                if (dungeon.cell[r, c].HasAnyFlag(Cellbits.STAIRS)) continue;
+                //::       next unless ($all || (int(rand(100)) < $p));
+                if (false == (all || dungeon.random.Next(100) < p)) continue;
 
-                    logger.LogTrace("collapse is not preempted for ({r},{c})", r, c);
-                    dungeon = collapse(dungeon, r, c, xc);
-                }
+                logger.LogTrace("collapse is not preempted for ({r},{c})", r, c);
+                dungeon = collapse(dungeon, r, c, xc);
             }
-            return dungeon;
         }
+        return dungeon;
     }
 
     ///<summary>relative to (r,c), if the proposed tunnel is valid, handle slated closures</summary>
@@ -2158,7 +2149,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
                     foreach ((int, int) t in xc[dir]["close"])
                     {
                         (int r, int c) del = (r + t.Item1, c + t.Item2);
-                        if (del.r == 4 && del.c == 9)
+                        if (del.r == 4 && del.c == 9) //? was this a debug trace?
                         {
                             logger.LogWarning(2, "will set {del} to NOTHING", del);
                         }
@@ -2355,10 +2346,17 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     Dungeon empty_blocks(Dungeon dungeon)
     {
         logger.LogInformation(nameof(empty_blocks));
-        dungeon.ForeachInclusive((r, c) =>
+
+        foreach ((var r, var c) in Dim2d.RangeInclusive(0, dungeon.max_row, 0, dungeon.max_col)
+            .Where(rc => dungeon.cell[rc.r, rc.c].HasAnyFlag(Cellbits.BLOCKED)))
         {
-            if (dungeon.cell[r, c].HasAnyFlag(Cellbits.BLOCKED)) dungeon.cell[r, c] = Cellbits.NOTHING;
-        });
+            dungeon.cell[r, c] = Cellbits.NOTHING;
+        }
+
+        // dungeon.ForeachInclusive((r, c) =>
+        // {
+        //     if (dungeon.cell[r, c].HasAnyFlag(Cellbits.BLOCKED)) dungeon.cell[r, c] = Cellbits.NOTHING;
+        // });
         return dungeon;
     }
 

@@ -66,7 +66,7 @@ public class DataField<T>(int height, int width)// needs to be record or class f
         set => this[point.Y, point.X] = value;
     }
 
-    static IEnumerable<(int r, int c)> Raster(int height, int width)
+    public static IEnumerable<(int r, int c)> Raster(int height, int width)
         => Enumerable.Range(0, height).SelectMany(r => Enumerable
             .Range(0, width).Select(c => (r, c)));
 
@@ -96,5 +96,5 @@ public class DataField<T>(int height, int width)// needs to be record or class f
 public static class GridPointExtensions
 {
     public static int Row(this Point self) => self.Y;
-    public static int Col(this Point self) => self.Y;
+    public static int Col(this Point self) => self.X;
 }

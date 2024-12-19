@@ -4,6 +4,28 @@ using SixLabors.ImageSharp;
 
 namespace Donjon;
 
+public static class Dim2d
+{
+    public static IEnumerable<(int r, int c)> RangeUpperExclusive(int startX, int endX, int startY, int endY)
+        => RangeInclusive(startX, endX - 1, startY, endY - 1);
+
+    public static IEnumerable<(int r, int c)> RangeInclusive(int startRow, int endRow, int startCol, int endCol)
+    {
+        for (int r = startRow; r <= endRow; r++)
+        {
+            for (int c = startCol; c <= endCol; c++)
+            {
+                yield return new(r, c);
+            }
+        }
+    }
+
+    /// <summary> Convert to Row-Column Tuple </summary>
+    public static (int r, int c) ToRC(this Point p) => (p.Y, p.X);
+    /// <summary> Convert from Row-Column Tuple </summary>
+    public static Point ToPoint(this (int r, int c) p) => new(p.c, p.r);
+}
+
 public struct Realspace<T>(T value)
 {
     public T Value { get; set; } = value;
@@ -63,6 +85,7 @@ public static class HemispaceConversionExtensions
         //:: // used to populate IDungeonRoom with realspace cell indices:
         //:: height = ((r2 - r1) + 1) * cellsize,
         //:: width = ((c2 - c1) + 1) * cellsize,
+        //? in the case of emplace_room, is the oddityloss is exploited to create perimeter cells?
         (int width, int height) = (proto.Value.Width * 2 + 1, proto.Value.Height * 2 + 1);
         return new Rectangle(x1, y1, width, height);
     }
