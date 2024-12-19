@@ -19,19 +19,32 @@ public struct Hemispace<T>(T value)
 
 public static class HemispaceConversionExtensions
 {
-    public static Point ToRealspace(this Hemispace<Point> proto)
+    /// <summary>
+    /// a realspace point that IS GUARANTEED TO BE ODD
+    /// </summary>
+    /// <param name="proto"></param>
+    /// <returns></returns>
+    public static Realspace<Point> ToRealspace(this Hemispace<Point> proto)
     {
         var x = (proto.Value.X * 2) + 1;
         var y = (proto.Value.Y * 2) + 1;
-        return new(x, y);
+        return new(new(x, y));
     }
 
-    public static Size ToRealspace(this Hemispace<Size> proto)
+    public static Hemispace<Point> ToHemi(this Realspace<Point> proto)
     {
-        (int width, int height) = (proto.Value.Width * 2 - 2, proto.Value.Height * 2 - 2);
-        return new Size(width, height);
+        //! any odd value will be lost
+        return new(new(proto.Value.X / 2, proto.Value.Y / 2));
     }
-    public static Rectangle ToRealspace(this Hemispace<Rectangle> proto)
+
+
+    public static Hemispace<Rectangle> ToHemi(this Realspace<Rectangle> proto)
+    {
+        //! any odd value will be lost
+        return new(new(proto.Value.X / 2, proto.Value.Y / 2, proto.Value.Width / 2, proto.Value.Height / 2));
+    }
+
+    public static Realspace<Rectangle> ToRealspace(this Hemispace<Rectangle> proto)
     {
         var x1 = (proto.Value.X * 2) + 1;
         var y1 = (proto.Value.Y * 2) + 1;
@@ -50,8 +63,13 @@ public static class HemispaceConversionExtensions
         //:: // used to populate IDungeonRoom with realspace cell indices:
         //:: height = ((r2 - r1) + 1) * cellsize,
         //:: width = ((c2 - c1) + 1) * cellsize,
-        (int width, int height) = (proto.Value.Width * 2 - 2, proto.Value.Height * 2 - 2);
+        (int width, int height) = (proto.Value.Width * 2 + 1, proto.Value.Height * 2 + 1);
         return new Rectangle(x1, y1, width, height);
     }
 
+    // public static Realspace<Size> ToRealspace(this Hemispace<Size> proto)
+    // {
+    //     (int width, int height) = (proto.Value.Width * 2 +, proto.Value.Height * 2+);
+    //     return new Size(width, height);
+    // }
 }
