@@ -1104,20 +1104,11 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
         using (logger.BeginScope(nameof(open_rooms)))
         {
             logger.LogDebug("Open rooms, batch of {n}", dungeon.room.Count);
-            foreach (var id in dungeon.room.Keys) // for (int id = 0; id < dungeon.n_rooms; id++) // [1..n_rooms] == [0..nrooms)
+            foreach (var r in dungeon.room)
             {
-                try
-                {
-                    dungeon = open_room(dungeon, dungeon.room[id]);
-                }
-                catch (KeyNotFoundException knf)
-                {
-                    logger.LogError(knf, "KNF: failed to fid {id} in {range}: [{keys}]", id, dungeon.n_rooms, string.Join(",", dungeon.room.Keys));
-                    throw;
-                }
+                dungeon = open_room(dungeon, r.Value);
             }
-            dungeon.connect?.Clear(); //   delete($dungeon->{'connect'});
-
+            dungeon.connect?.Clear();
             return dungeon;
         }
     }
@@ -1596,9 +1587,9 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
             // from 1,1 to n_i-1,n_j-1, inclusive
             for (int i = 1; i < dungeon.n_i; i++)
             {
-                int r = i * 2 + 1;
                 for (int j = 1; j < dungeon.n_j; j++)
                 {
+                    int r = i * 2 + 1;
                     int c = j * 2 + 1;
                     logger.LogDebug(1, "Consider tunnling from ({r},{c})", r, c);
                     if (dungeon.cell[r, c].HasAnyFlag(Cellbits.CORRIDOR)) // if we see Corridor, we already tunneled at [r,c]
