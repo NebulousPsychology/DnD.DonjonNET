@@ -6,7 +6,6 @@ using Donjon.Original;
 namespace Donjon;
 public partial class DungeonGenRefactored
 {
-
     #region Magic Tables
 
     /// <summary>

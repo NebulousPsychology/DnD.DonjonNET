@@ -17,17 +17,11 @@ interface IRoomPlacement
     public void emplace_rooms();
 }
 
-class NuGenerator(IOptions<Settings> settings, ILoggerFactory loggerFactory) : IDungeonGenerator
-{
-    private ILogger<NuGenerator> Logger { get; } = loggerFactory?.CreateLogger<NuGenerator>()
-        ?? NullLogger<NuGenerator>.Instance;
-    public IDungeonRoomIssuer RoomIssuer { get; } = new RoomIdIssuer(Options.Create(settings.Value.Rooms), Options.Create(settings.Value.Dungeon));
-    public IDungeon Create_dungeon()
-    {
-        throw new NotImplementedException();
-    }
-}
-
+/// <summary>
+/// An adapter to use the original 1:1 implementation
+/// </summary>
+/// <param name="settings"></param>
+/// <param name="loggerFactory"></param>
 class OldGeneratorWrapper(IOptions<Settings> settings, ILoggerFactory loggerFactory) : IDungeonGenerator
 {
     private ILogger<OldGeneratorWrapper> Logger { get; } = loggerFactory?.CreateLogger<OldGeneratorWrapper>() ?? NullLogger<OldGeneratorWrapper>.Instance;
