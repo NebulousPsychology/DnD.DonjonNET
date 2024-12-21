@@ -38,24 +38,21 @@ public partial class DungeonGenRefactored
             //! To this end, ij-indexspace is halfgrid, scaled and offset to return to rowspace
 
             //RASTER: HEMI: INCLUSIVE INSET <1,1>..<ni=nrows/2-1 (odd),nj=ncols/2-1 (odd)>
-            for (Hemispace<int> i = new(1); i.Value < dungeon.n_i; i.Value++)
+            // from 1,1 to n_i-1,n_j-1, inclusive
+            foreach (var (i, j) in Dim2d.RangeInclusive(1, dungeon.n_i - 1, 1, dungeon.n_j - 1).Cast<(Hemispace<int>, Hemispace<int>)>())
             {
-                for (int j = 1; j < dungeon.n_j; j++)
+                var (r, c) = (i, j).ToRealspace();
+
+                logger.LogDebug(1, "Consider tunnling from ({r},{c})", r, c);
+                if (dungeon.cell[r, c].HasAnyFlag(Cellbits.CORRIDOR)) // if we see Corridor, we already tunneled at [r,c]
                 {
-                    // from 1,1 to n_i-1,n_j-1, inclusive
-                    Realspace<int> r = i.Value * 2 + 1;
-                    Realspace<int> c = j * 2 + 1;
-                    logger.LogDebug(1, "Consider tunnling from ({r},{c})", r, c);
-                    if (dungeon.cell[r, c].HasAnyFlag(Cellbits.CORRIDOR)) // if we see Corridor, we already tunneled at [r,c]
-                    {
-                        continue;
-                    }
-                    logger.LogDebug(2, "About to tunnel from ({r},{c}) because it isn't CORRIDOR", r, c);
-                    // ? but then we snap back into index-space?
-                    dungeon = tunnel(dungeon, i.Value, j);
-                    logger.LogInformation(3, "Finished a Tunnel from {fn}! \nnew map:{map}",
-                        nameof(corridors), DescribeDungeonLite(dungeon));
+                    continue;
                 }
+                logger.LogDebug(2, "About to tunnel from ({r},{c}) because it isn't CORRIDOR", r, c);
+                // ? but then we snap back into index-space?
+                dungeon = tunnel(dungeon, i.Value, j.Value);
+                logger.LogInformation(3, "Finished a Tunnel from {fn}! \nnew map:{map}",
+                    nameof(corridors), DescribeDungeonLite(dungeon));
             }
             return dungeon;
         }
@@ -229,22 +226,19 @@ public partial class DungeonGenRefactored
             if (next_c < 0 || next_c >= dungeon.n_cols) return false;
 
             // find extents in an order that is convenient for iteration
-            int r1 = Math.Min(mid_r, next_r);
-            int c1 = Math.Min(mid_c, next_c);
-            int r2 = Math.Max(mid_r, next_r);
-            int c2 = Math.Max(mid_c, next_c);
+            Realspace<int> r1 = Math.Min(mid_r, next_r);
+            Realspace<int> c1 = Math.Min(mid_c, next_c);
+            Realspace<int> r2 = Math.Max(mid_r, next_r);
+            Realspace<int> c2 = Math.Max(mid_c, next_c);
 
             //RASTER:new REAL: INCLUSIVE <r1,c1>..<r2,c2>
-            for (int r = r1; r <= r2; r++)
+            foreach (var (r, c) in Dim2d.RangeInclusive(r1, r2, c1, c2))
             {
-                for (int c = c1; c <= c2; c++)
+                // HasFlag requires the FULL bitmask, not ANY part of it ( x&y !=0 )
+                if (dungeon.cell[r, c].HasAnyFlag(Cellbits.BLOCK_CORR))
                 {
-                    // HasFlag requires the FULL bitmask, not ANY part of it ( x&y !=0 )
-                    if (dungeon.cell[r, c].HasAnyFlag(Cellbits.BLOCK_CORR))
-                    {
-                        logger.LogDebug("tunnel sounding false from {r},{c} to {x},{y}: a block_corr was found", mid_r, mid_c, next_r, next_c);
-                        return false;
-                    }
+                    logger.LogDebug("tunnel sounding false from {r},{c} to {x},{y}: a block_corr was found", mid_r, mid_c, next_r, next_c);
+                    return false;
                 }
             }
             logger.LogDebug("tunnel sounding true from {r},{c} to {x},{y}", mid_r, mid_c, next_r, next_c);
@@ -290,14 +284,11 @@ public partial class DungeonGenRefactored
             int c2 = Math.Max(this_c, next_c);
 
             //RASTER: REAL: INCLUSIVE <r1,c1>..<r2,c2>
-            for (int r = r1; r <= r2; r++)
+            foreach (var (r, c) in Dim2d.RangeInclusive(r1, r2, c1, c2))
             {
-                for (int c = c1; c <= c2; c++)
-                {
-                    logger.LogTrace("delve tunnel: mark {r},{c} as non-entrance corridor", r, c);
-                    dungeon.cell[r, c] &= ~Cellbits.ENTRANCE; // filter to everybit EXCEPT entrance (erase Entrance bits)
-                    dungeon.cell[r, c] |= Cellbits.CORRIDOR; // set Corridor
-                }
+                logger.LogTrace("delve tunnel: mark {r},{c} as non-entrance corridor", r, c);
+                dungeon.cell[r, c] &= ~Cellbits.ENTRANCE; // filter to everybit EXCEPT entrance (erase Entrance bits)
+                dungeon.cell[r, c] |= Cellbits.CORRIDOR; // set Corridor
             }
             return true;
         }

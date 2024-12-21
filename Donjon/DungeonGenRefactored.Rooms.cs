@@ -69,27 +69,24 @@ public partial class DungeonGenRefactored
         using (logger.BeginScope(nameof(pack_rooms)))
         {
             //RASTER: HEMI: EXCLUSIVE <0,0>..<nrows/2,ncols/2>
-            for (int i = 0; i < dungeon.n_i; i++)
+            foreach (var (i, j) in Dim2d.RangeInclusive(0, dungeon.n_i - 1, 0, dungeon.n_j - 1))
             {
-                for (int j = 0; j < dungeon.n_j; j++)
-                {
-                    var r = 2 * i + 1;
-                    var c = 2 * j + 1;
-                    //__ across the dungeon's hemicell space, ...
+                var r = 2 * i + 1;
+                var c = 2 * j + 1;
+                //__ across the dungeon's hemicell space, ...
 
-                    //::       next if ($cell->[$r][$c] & $ROOM);
-                    if (dungeon.cell[r, c].HasFlag(Cellbits.ROOM)) continue;
+                //::       next if ($cell->[$r][$c] & $ROOM);
+                if (dungeon.cell[r, c].HasFlag(Cellbits.ROOM)) continue;
 
-                    logger.LogInformation("pack-request: room {i} of {n}, last id={id}", i + 1, dungeon.n_rooms,
-                          dungeon.last_room_id?.ToString() ?? "null");
+                logger.LogInformation("pack-request: room {i} of {n}, last id={id}", i + 1, dungeon.n_rooms,
+                      dungeon.last_room_id?.ToString() ?? "null");
 
-                    //::       next if (($i == 0 || $j == 0) && int(rand(2)));
-                    if ((i == 0 || j == 0) && dungeon.random.Next(2) != 0) continue;
-                    //? why single out 0th row and column for cointoss ?
+                //::       next if (($i == 0 || $j == 0) && int(rand(2)));
+                if ((i == 0 || j == 0) && dungeon.random.Next(2) != 0) continue;
+                //? why single out 0th row and column for cointoss ?
 
-                    var proto = (i, j); // coordinates in hemicell space
-                    dungeon = emplace_room(dungeon, proto);
-                }
+                var proto = (i, j); // coordinates in hemicell space
+                dungeon = emplace_room(dungeon, proto);
             }
             return dungeon;
         }
@@ -259,25 +256,24 @@ public partial class DungeonGenRefactored
         using (logger.BeginScope("mini:emplaceroom"))
         {
             //RASTER: INCLUSIVE <r1,c1>..<r2,c2>
-            for (int r = r1; r <= r2; r++)
-            {
-                for (int c = c1; c <= c2; c++)
-                {
-                    // remove Entrance marker
-                    if (dungeon.cell[r, c].HasFlag(Cellbits.ENTRANCE)) //::       if ($cell->[$r][$c] & $ENTRANCE) {
-                    {
-                        dungeon.cell[r, c] &= ~Cellbits.ESPACE;
-                    }
-                    else if (dungeon.cell[r, c].HasFlag(Cellbits.PERIMETER)) //::       } elsif ($cell->[$r][$c] & $PERIMETER) {
-                    {
-                        // remove Perimiter marker
-                        dungeon.cell[r, c] &= ~Cellbits.PERIMETER;
-                    }
 
-                    // Add room marker, plus the room Id:  make the cell a member of proposedRoomId
-                    //// dungeon.cell[r, c] |= Cellbits.ROOM | (Cellbits)(proposed_room_id << 6);
-                    dungeon.cell[r, c].TrySetRoomId(proposed_room_id);
+            foreach (var (r, c) in Dim2d.RangeInclusive(r1, r2, c1, c2))
+            {
+                // remove Entrance marker
+                if (dungeon.cell[r, c].HasFlag(Cellbits.ENTRANCE)) //::       if ($cell->[$r][$c] & $ENTRANCE) {
+                {
+                    dungeon.cell[r, c] &= ~Cellbits.ESPACE;
                 }
+                else if (dungeon.cell[r, c].HasFlag(Cellbits.PERIMETER)) //::       } elsif ($cell->[$r][$c] & $PERIMETER) {
+                {
+                    // remove Perimiter marker
+                    dungeon.cell[r, c] &= ~Cellbits.PERIMETER;
+                }
+
+                // Add room marker, plus the room Id:  make the cell a member of proposedRoomId
+                //// dungeon.cell[r, c] |= Cellbits.ROOM | (Cellbits)(proposed_room_id << 6);
+                dungeon.cell[r, c].TrySetRoomId(proposed_room_id);
+
             }
 
             int cellsize = 1; //! is an alteration vs perl: original specifies 10
@@ -532,25 +528,22 @@ public partial class DungeonGenRefactored
             Dictionary<string, int> hit = [];
 
             //RASTER: REALSPACE: INCLUSIVE <r1,c1>..<r2,c2>
-            for (int r = r1; r <= r2; r++)
+            foreach (var (r, c) in Dim2d.RangeInclusive(r1, r2, c1, c2))
             {
-                for (int c = c1; c <= c2; c++)
+                //       if ($cell->[$r][$c] & $BLOCKED) {
+                if (dungeon.cell[r, c].HasFlag(Cellbits.BLOCKED))
                 {
-                    //       if ($cell->[$r][$c] & $BLOCKED) {
-                    if (dungeon.cell[r, c].HasFlag(Cellbits.BLOCKED))
+                    return new Dictionary<string, int> { ["blocked"] = 1 };
+                }
+                if (dungeon.cell[r, c].TryGetRoomId(out int roomid))
+                {
+                    if (hit.TryGetValue(roomid.ToString(), out int prevhitcount))
                     {
-                        return new Dictionary<string, int> { ["blocked"] = 1 };
+                        hit[roomid.ToString()] = prevhitcount + 1;
                     }
-                    if (dungeon.cell[r, c].TryGetRoomId(out int roomid))
+                    else
                     {
-                        if (hit.TryGetValue(roomid.ToString(), out int prevhitcount))
-                        {
-                            hit[roomid.ToString()] = prevhitcount + 1;
-                        }
-                        else
-                        {
-                            hit.Add(roomid.ToString(), 1);
-                        }
+                        hit.Add(roomid.ToString(), 1);
                     }
                 }
             }

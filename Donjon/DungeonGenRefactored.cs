@@ -174,13 +174,10 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
             //? should transpose getlen index?
 
             //RASTER: REALSPACE: INCLUSIVE <0,0>..<nrows,ncols>
-            for (int r = 0; r <= dungeon.n_rows; r++)
+            foreach (var (r, c) in Dim2d.RangeInclusive(0, dungeon.n_rows, 0, dungeon.n_cols))
             {
-                for (int c = 0; c <= dungeon.n_cols; c++)
-                {
-                    //::       $cell->[$r][$c] = $BLOCKED unless ($mask->[$r * $r_x][$c * $c_x]);
-                    dungeon.cell[r, c] = (mask[r * r_x, c * c_x] != 0) ? dungeon.cell[r, c] : Cellbits.BLOCKED;
-                }
+                //::       $cell->[$r][$c] = $BLOCKED unless ($mask->[$r * $r_x][$c * $c_x]);
+                dungeon.cell[r, c] = (mask[r * r_x, c * c_x] != 0) ? dungeon.cell[r, c] : Cellbits.BLOCKED;
             }
             return dungeon;
         }
@@ -212,14 +209,11 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
             var centerOfMap = (r: dungeon.n_rows / 2, c: dungeon.n_cols / 2);
 
             //RASTER: REALSPACE: INCLUSIVE <0,0>..<nrows,ncols>
-            for (int r = 0; r <= dungeon.n_rows; r++)
+            foreach (var (r, c) in Dim2d.RangeInclusive(0, dungeon.n_rows, 0, dungeon.n_cols))
             {
-                for (int c = 0; c <= dungeon.n_cols; c++)
-                {
-                    var radius = Math.Sqrt(Math.Pow(r - centerOfMap.r, 2) + Math.Pow(c - centerOfMap.c, 2));
-                    //       $cell->[$r][$c] = $BLOCKED if ($d > $center_c);
-                    dungeon.cell[r, c] = (radius > centerOfMap.c) ? Cellbits.BLOCKED : dungeon.cell[r, c];
-                }
+                var radius = Math.Sqrt(Math.Pow(r - centerOfMap.r, 2) + Math.Pow(c - centerOfMap.c, 2));
+                //       $cell->[$r][$c] = $BLOCKED if ($d > $center_c);
+                dungeon.cell[r, c] = (radius > centerOfMap.c) ? Cellbits.BLOCKED : dungeon.cell[r, c];
             }
             return dungeon;
         }
@@ -402,32 +396,28 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
 
             //? rowspace/indexspace to enforce odd row/col
             //RASTER: HEMI: EXCLUSIVE-high [<0,0>..<ni=nrows/2(E),nj=ncols/2(E)>)
-            for (int i = 0; i < dungeon.n_i; i++) // lbl ROW
+            foreach (var (i, j) in Dim2d.RangeInclusive(0, dungeon.n_i - 1, 0, dungeon.n_j - 1).Cast<(Hemispace<int>, Hemispace<int>)>())
             {
-                for (int j = 0; j < dungeon.n_j; j++) // lbl COL
+                // r,c reconstituted (as every-other? odd)
+                var (r, c) = (i, j).ToRealspace();
+
+                //::       next unless ($cell->[$r][$c] == $CORRIDOR);
+                if (dungeon.cell[r, c] != Cellbits.CORRIDOR) continue;
+                //::       next if ($cell->[$r][$c] & $STAIRS);
+                if (dungeon.cell[r, c].HasAnyFlag(Cellbits.STAIRS)) continue;
+
+                foreach (Cardinal dir in stair_end.Keys)
                 {
-                    int r = i * 2 + 1;
-                    int c = j * 2 + 1;
-                    // r,c reconstituted (as every-other? odd)
-
-                    //::       next unless ($cell->[$r][$c] == $CORRIDOR);
-                    if (dungeon.cell[r, c] != Cellbits.CORRIDOR) continue;
-                    //::       next if ($cell->[$r][$c] & $STAIRS);
-                    if (dungeon.cell[r, c].HasAnyFlag(Cellbits.STAIRS)) continue;
-
-                    foreach (Cardinal dir in stair_end.Keys)
+                    if (check_tunnel(dungeon.cell, r, c, stair_end[dir]))
                     {
-                        if (check_tunnel(dungeon.cell, r, c, stair_end[dir]))
-                        {
-                            StairEnd end = new() { row = r, col = c };
-                            (int, int) n = stair_end[dir]["next"].Single();
-                            end.next_row = end.row + n.Item1;
-                            end.next_col = end.col + n.Item2;
+                        StairEnd end = new() { row = r, col = c };
+                        (int, int) n = stair_end[dir]["next"].Single();
+                        end.next_row = end.row + n.Item1;
+                        end.next_col = end.col + n.Item2;
 
-                            //::           push(@list,$end); next COL;
-                            list.Add(end);
-                            break; // out of dir's foreach, continue to next col in for-j
-                        }
+                        //::           push(@list,$end); next COL;
+                        list.Add(end);
+                        break; // out of dir's foreach, continue to next col in for-j
                     }
                 }
             }
@@ -525,11 +515,10 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
             bool all = p is 100;
 
             //RASTER: HEMI: ExCLUSIVE High  [<0,0> .. <ni=nrows/2-1(o),nj=ncols/2-1(o)]
-            foreach (var (i, j) in Dim2d.RangeInclusive(0, dungeon.n_i - 1, 0, dungeon.n_j - 1))
+            foreach (var (r, c) in Dim2d.RangeInclusive(0, dungeon.n_i - 1, 0, dungeon.n_j - 1)
+                .Cast<(Hemispace<int>, Hemispace<int>)>()
+                .Select(ij => ij.ToRealspace()))
             {
-                int r = i * 2 + 1;
-                int c = j * 2 + 1;
-
                 logger.LogTrace("about to collapse ({r},{c})", r, c);
                 //::       next unless ($cell->[$r][$c] & $OPENSPACE);
                 if (false == dungeon.cell[r, c].HasAnyFlag(Cellbits.OPENSPACE)) continue;

@@ -33,7 +33,7 @@ public struct Realspace<T>(T value)
     public static implicit operator Realspace<T>(T d) => new(d);
 }
 
-public struct Hemispace<T>(T value)
+public struct Hemispace<T>(T value) //where T : System.Numerics.IAdditionOperators<T,T,T>, System.Numerics.IAdditiveIdentity<T,Hemispace<T>>
 {
     public T Value { get; set; } = value;
     public static explicit operator T(Hemispace<T> d) => d.Value;
@@ -52,6 +52,15 @@ public static class HemispaceConversionExtensions
         var y = (proto.Value.Y * 2) + 1;
         return new(new(x, y));
     }
+
+    /// <summary>
+    /// expand hemispace to a realspace point that IS GUARANTEED TO BE ODD
+    /// </summary>
+    public static (Realspace<int>, Realspace<int>) ToRealspace(this (Hemispace<int>, Hemispace<int>) proto)
+        => (new((proto.Item1.Value * 2) + 1), new((proto.Item2.Value * 2) + 1));
+
+    public static Hemispace<Point> ToHemi(this (Realspace<int>, Realspace<int>) proto)
+    => new(new(proto.Item1.Value / 2, proto.Item2.Value / 2));
 
     public static Hemispace<Point> ToHemi(this Realspace<Point> proto)
     {
