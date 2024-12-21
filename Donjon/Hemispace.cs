@@ -9,13 +9,23 @@ public static class Dim2d
     public static IEnumerable<(int r, int c)> RangeUpperExclusive(int startX, int endX, int startY, int endY)
         => RangeInclusive(startX, endX - 1, startY, endY - 1);
 
-    public static IEnumerable<(int r, int c)> RangeInclusive(int startRow, int endRow, int startCol, int endCol)
+    /// <summary>
+    /// Get Row-col tuples for each cell in the rectangle
+    /// </summary>
+    public static IEnumerable<(int r, int c)> RangeInclusive(Rectangle r)
+        => RangeInclusive(r.Top, r.Bottom - 1, r.Left, r.Right - 1);
+
+
+    /// <summary>
+    /// Get Row-col tuples for each cell in the rectangle
+    /// </summary>
+    public static IEnumerable<(int r, int c)> RangeInclusive(int startRow, int endRow, int startCol, int endCol, int rstep = 1, int cstep = 1)
     {
-        for (int r = startRow; r <= endRow; r++)
+        for (int r = startRow; r <= endRow; r += rstep)
         {
-            for (int c = startCol; c <= endCol; c++)
+            for (int c = startCol; c <= endCol; c += cstep)
             {
-                yield return new(r, c);
+                yield return (r, c);
             }
         }
     }
@@ -23,7 +33,7 @@ public static class Dim2d
     /// <summary> Convert to Row-Column Tuple </summary>
     public static (int r, int c) ToRC(this Point p) => (p.Y, p.X);
     /// <summary> Convert from Row-Column Tuple </summary>
-    public static Point ToPoint(this (int r, int c) p) => new(p.c, p.r);
+    public static Point ToPoint(this (int r, int c) p) => new(x: p.c, y: p.r);
 }
 
 public struct Realspace<T>(T value)
@@ -41,34 +51,40 @@ public struct Hemispace<T>(T value) //where T : System.Numerics.IAdditionOperato
 
 public static class HemispaceConversionExtensions
 {
-    /// <summary>
-    /// a realspace point that IS GUARANTEED TO BE ODD
-    /// </summary>
-    /// <param name="proto"></param>
-    /// <returns></returns>
-    public static Realspace<Point> ToRealspace(this Hemispace<Point> proto)
-    {
-        var x = (proto.Value.X * 2) + 1;
-        var y = (proto.Value.Y * 2) + 1;
-        return new(new(x, y));
-    }
-
+    #region tuple-to-tuple
     /// <summary>
     /// expand hemispace to a realspace point that IS GUARANTEED TO BE ODD
     /// </summary>
     public static (Realspace<int>, Realspace<int>) ToRealspace(this (Hemispace<int>, Hemispace<int>) proto)
         => (new((proto.Item1.Value * 2) + 1), new((proto.Item2.Value * 2) + 1));
 
-    public static Hemispace<Point> ToHemi(this (Realspace<int>, Realspace<int>) proto)
-    => new(new(proto.Item1.Value / 2, proto.Item2.Value / 2));
+    /// <summary>
+    /// condense to the corresponding hemispace (even) coordinate
+    /// </summary>
+    /// <param name="proto"></param>
+    /// <returns></returns>
+    public static (Hemispace<int>, Hemispace<int>) ToHemi(this (Realspace<int>, Realspace<int>) proto)
+        => (new(proto.Item1.Value / 2), new(proto.Item2.Value / 2));
+    #endregion tuple-to-tuple
 
+    #region Point-to-Point
+    /// <summary>
+    /// a realspace point that IS GUARANTEED TO BE ODD
+    /// </summary>
+    /// <param name="proto"></param>
+    /// <returns></returns>
+    public static Realspace<Point> ToRealspace(this Hemispace<Point> proto)
+        => new(new Point(x: (proto.Value.X * 2) + 1, y: (proto.Value.Y * 2) + 1));
+
+    /// <summary>
+    /// condense to the corresponding hemispace (even) coordinate
+    /// </summary>
     public static Hemispace<Point> ToHemi(this Realspace<Point> proto)
-    {
-        //! any odd value will be lost
-        return new(new(proto.Value.X / 2, proto.Value.Y / 2));
-    }
+        => new(new Point(proto.Value.X / 2, proto.Value.Y / 2));
 
+    #endregion Point-to-Point
 
+    #region Rect-to-Rect
     public static Hemispace<Rectangle> ToHemi(this Realspace<Rectangle> proto)
     {
         //! any odd value will be lost
@@ -98,6 +114,7 @@ public static class HemispaceConversionExtensions
         (int width, int height) = (proto.Value.Width * 2 + 1, proto.Value.Height * 2 + 1);
         return new Rectangle(x1, y1, width, height);
     }
+    #endregion Rect-to-Rect
 
     // public static Realspace<Size> ToRealspace(this Hemispace<Size> proto)
     // {
