@@ -1,4 +1,6 @@
 
+using System.Drawing;
+
 using Donjon.Original;
 
 using Microsoft.Extensions.Logging;
@@ -42,13 +44,16 @@ public partial class DungeonGenRefactored
             foreach (var (i, j) in Dim2d.RangeInclusive(1, dungeon.n_i - 1, 1, dungeon.n_j - 1).Cast<(Hemispace<int>, Hemispace<int>)>())
             {
                 var (r, c) = (i, j).ToRealspace();
-
-                logger.LogDebug(1, "Consider tunnling from ({r},{c})", r, c);
                 if (dungeon.cell[r, c].HasAnyFlag(Cellbits.CORRIDOR)) // if we see Corridor, we already tunneled at [r,c]
                 {
+                    logger.LogDebug(1, "Consider tunnling from ({r},{c})... reject (already is corridor)", r, c);
                     continue;
                 }
-                logger.LogDebug(2, "About to tunnel from ({r},{c}) because it isn't CORRIDOR", r, c);
+                else
+                {
+                    logger.LogDebug(2, "About to tunnel from ({r},{c}) because it isn't CORRIDOR", r, c);
+                }
+
                 // ? but then we snap back into index-space?
                 dungeon = tunnel(dungeon, i.Value, j.Value);
                 logger.LogInformation(3, "Finished a Tunnel from {fn}! \nnew map:{map}",
@@ -100,6 +105,10 @@ public partial class DungeonGenRefactored
         }
         return dungeon;
         // }
+    }
+    sealed class DirectionHelper
+    {
+        public static (int, int) Next(Cardinal d, (int, int) from) => (0, 0);
     }
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
