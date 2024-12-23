@@ -13,7 +13,13 @@ public static class Dim2d
     /// Get Row-col tuples for each cell in the rectangle
     /// </summary>
     public static IEnumerable<(int r, int c)> RangeInclusive(Rectangle r)
-        => RangeInclusive(r.Top, r.Bottom - 1, r.Left, r.Right - 1);
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(r.Height, 1, nameof(r.Height));
+        ArgumentOutOfRangeException.ThrowIfLessThan(r.Width, 1, nameof(r.Width));
+        ArgumentOutOfRangeException.ThrowIfLessThan(r.Bottom, r.Top);
+        ArgumentOutOfRangeException.ThrowIfLessThan(r.Right, r.Left);
+        return RangeInclusive(r.Top, r.Bottom - 1, r.Left, r.Right - 1);
+    }
 
 
     /// <summary>
