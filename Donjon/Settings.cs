@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Donjon;
 #pragma warning disable IDE1006 // Naming Styles
 
@@ -84,3 +86,10 @@ public class MapSettings
 }
 
 #pragma warning restore IDE1006 // Naming Styles
+
+public static class JsonExtensions
+{
+    readonly static JsonSerializerOptions Indented = new(JsonSerializerDefaults.General) { WriteIndented = true };
+    readonly static JsonSerializerOptions Default = new(JsonSerializerDefaults.General);
+    public static string ToJson<T>(this T self, bool indent = false) => JsonSerializer.Serialize(self, indent ? Indented : Default);
+}
