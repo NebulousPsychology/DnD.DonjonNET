@@ -405,6 +405,7 @@ public partial class DungeonGenRefactored
     ///     where i&j are either the original hemispace coords OR a random hemispace coord that can fit the room
     ///     FIXME: uncertainty remains on whether this directly maps to Rectangle types
     /// </returns>
+    [Obsolete("Prefer Hemispace<Point>")]
     IDictionary<string, int> set_room(Dungeon dungeon, (int i, int j)? prototuple)
     {
         using (logger.BeginScope(nameof(set_room)))
