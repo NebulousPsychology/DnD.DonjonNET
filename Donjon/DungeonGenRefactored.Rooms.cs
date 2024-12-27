@@ -463,6 +463,13 @@ public partial class DungeonGenRefactored
 #endif
         }
     }
+
+    /// <summary>propose room position and size</summary>
+    /// <returns>
+    ///     a dictionary [i,j,height,width] representing a rectangle in hemispace:
+    ///     where i&j are either the original hemispace coords OR a random hemispace coord that can fit the room
+    ///     FIXME: uncertainty remains on whether this directly maps to Rectangle types
+    /// </returns>
     private Hemispace<Rectangle> set_room(Dungeon dungeon, Hemispace<Point>? prototuple)
     {
         //RASTER: (prototup,if any, comes from a...) HEMI: EXCLUSIVE <0,0>..<ni=nrows/2,nj=ncols/2>
@@ -473,17 +480,16 @@ public partial class DungeonGenRefactored
             int createRadix(int hemicelladdress, int hemicellmax)
                 => Math.Min(roomRadix, Math.Max(0, hemicellmax - roomBase - hemicelladdress));
 
-            var radix = prototuple.HasValue is false ? (i: roomRadix, j: roomRadix)
-                : (
-                    i: createRadix(prototuple.Value!.Value.Y, dungeon.n_i),
-                    j: createRadix(prototuple.Value!.Value.X, dungeon.n_j)
-                );
+            var radix = prototuple is Hemispace<Point> rpt ? (
+                    i: createRadix(rpt.Value.Y, dungeon.n_i),
+                    j: createRadix(rpt.Value.X, dungeon.n_j)
+                )
+                : (i: roomRadix, j: roomRadix);
 
             Size size = new(width: dungeon.random.Next(radix.j) + roomBase,
                             height: dungeon.random.Next(radix.i) + roomBase);
 
-            Point p = prototuple.HasValue
-                ? new Point(x: prototuple.Value.Value.X, y: prototuple.Value.Value.Y)
+            Point p = prototuple is Hemispace<Point> point ? point.Value
                 : new Point(x: dungeon.random.Next(dungeon.n_j - size.Width),
                             y: dungeon.random.Next(dungeon.n_i - size.Height));
 
