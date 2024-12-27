@@ -302,38 +302,36 @@ public partial class DungeonGenRefactored
     /// <param name="proposed_room_id">room id, if a new room gets issued</param>
     /// <param name="r">a realspace region, enclosing the coordinates of the proposed room</param>
     /// <returns>true if a new room was issued</returns>
-    bool emplace_room_collisiontest(IDungeon dungeon, out int proposed_room_id, Rectangle r)
-    {
-        return emplace_room_collisiontest(dungeon, out proposed_room_id, r.Top, r.Left, r.Bottom, r.Right);
-    }
-    bool emplace_room_collisiontest(IDungeon dungeon, out int proposed_room_id, int r1, int c1, int r2, int c2)
+    bool emplace_room_collisiontest(IDungeon dungeon, out int proposed_room_id, Realspace<Rectangle> rect)
     {
         //RASTER: (coords,if any, comes from a...) HEMI: EXCLUSIVE <0,0>..<nrows/2,ncols/2>
         //   # check for collisions with existing rooms
         using (logger.BeginScope("mini:collisiontest"))
         {
-            Dictionary<string, int> hit = sound_room(dungeon, r1, c1, r2, c2);
-            if (hit.ContainsKey("blocked"))
+            if (TrySoundRoom(dungeon, rect, out var block, out var hit))
+            {
+                logger.LogDebug("Room {r} @[{extents}]: approved because no hits", MyRoomIssuer.Current, rect.ToString());
+                return MyRoomIssuer.TryIssueRoom(out proposed_room_id) ? true : throw new Exception($"Ran out of rooms? {MyRoomIssuer.Current}");
+            }
+            else if (block)
             {
                 logger.LogTrace("sounding resulted in block");
                 proposed_room_id = -1;
                 return false;
             }
-
-            int n_hits = hit.Count;
-            if (n_hits == 0)
-            {
-                logger.LogDebug("Room {r} @[{extents}]: approved because no hits", MyRoomIssuer.Current, string.Join(",", (object[])[(r1, c1), (r2, c2)]));
-                return MyRoomIssuer.TryIssueRoom(out proposed_room_id) ? true : throw new Exception($"Ran out of rooms? {MyRoomIssuer.Current}");
-            }
             else
             {
-                logger.LogInformation("Room {r} @[{extents}]: rejected because hits={h} > 0 ", MyRoomIssuer.Current, string.Join(",", (object[])[(r1, c1), (r2, c2)]), n_hits);
+                logger.LogInformation("Room {r} @[{extents}]: rejected because hits={h} > 0 ", MyRoomIssuer.Current, rect.ToString(), hit.Count);
                 proposed_room_id = -1;
                 return false;
             }
         }
     }
+
+    [Obsolete("Prefer Rectangles")]
+    bool emplace_room_collisiontest(IDungeon dungeon, out int proposed_room_id, int r1, int c1, int r2, int c2)
+            => emplace_room_collisiontest(dungeon, out proposed_room_id, new(new(c1, r1, c2 - c1, r2 - r1)));
+
     /// <summary>
     /// block corridors from room boundary; check for door openings from adjacent rooms
     /// </summary>
@@ -521,16 +519,15 @@ public partial class DungeonGenRefactored
     /// blocked=1
     /// }
     /// </remarks>
-    Dictionary<string, int> sound_room(IDungeon dungeon, int r1, int c1, int r2, int c2)
+    Dictionary<string, int> sound_room(IDungeon dungeon, Realspace<Rectangle> rect)
     {
         using (logger.BeginScope(nameof(sound_room)))
         {
             Dictionary<string, int> hit = [];
 
             //RASTER: REALSPACE: INCLUSIVE <r1,c1>..<r2,c2>
-            foreach (var (r, c) in Dim2d.RangeInclusive(r1, r2, c1, c2))
+            foreach (var (r, c) in Dim2d.RangeInclusive(rect))
             {
-                //       if ($cell->[$r][$c] & $BLOCKED) {
                 if (dungeon.cell[r, c].HasFlag(Cellbits.BLOCKED))
                 {
                     return new Dictionary<string, int> { ["blocked"] = 1 };
@@ -547,10 +544,19 @@ public partial class DungeonGenRefactored
                     }
                 }
             }
-            logger.LogDebug("sounding row({a}..{b})/col({c}..{d}): {hits}", r1, r2, c1, c2,
-                string.Join(",", hit.Select(kvp => $"'{kvp.Key}'={kvp.Value}")));
+            logger.LogDebug("sounding {rect}: {hits}", rect.ToJson(), string.Join(",", hit.Select(kvp => $"'{kvp.Key}'={kvp.Value}")));
             return hit;
         }
+    }
+    [Obsolete("Prefer Rectangles")]
+    Dictionary<string, int> sound_room(IDungeon dungeon, int r1, int c1, int r2, int c2)
+        => sound_room(dungeon, new(new(c1, r1, c2 - c1, r2 - r1)));
+
+    bool TrySoundRoom(IDungeon dungeon, Realspace<Rectangle> rect, out bool blocked, out Dictionary<string, int> hit)
+    {
+        hit = sound_room(dungeon, rect);
+        blocked = hit.ContainsKey("blocked");
+        return hit is { Count: 0 };
     }
     #endregion place rooms
 
