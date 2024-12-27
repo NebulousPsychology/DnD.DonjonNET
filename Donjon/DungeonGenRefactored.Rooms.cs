@@ -338,7 +338,7 @@ public partial class DungeonGenRefactored
     /// <param name="dungeon"></param>
     void emplace_room_BlockPerimeter(IDungeon dungeon, Realspace<int> r1, Realspace<int> c1, Realspace<int> r2, Realspace<int> c2)
     {
-        void tx(int r, int c)
+        void PerimeterizeIfNonroomNonentrance(int r, int c)
         {
             if (!dungeon.cell[r, c].HasAnyFlag(Cellbits.ROOM | Cellbits.ENTRANCE)) //! or-entrance is NOT an alteration vs perl!
             {
@@ -350,14 +350,14 @@ public partial class DungeonGenRefactored
             //RASTER: REALSPACE: INCLUSIVE INFLATED <r1-1,c1-1>..<r2+1,c2+1>
             for (int r = r1 - 1; r <= r2 + 1; r++) // note: 1-cell outset
             {
-                tx(r, c1 - 1);
-                tx(r, c2 + 1);
+                PerimeterizeIfNonroomNonentrance(r, c1 - 1);
+                PerimeterizeIfNonroomNonentrance(r, c2 + 1);
             }
 
             for (int c = c1 - 1; c <= c2 + 1; c++)
             {
-                tx(r1 - 1, c);
-                tx(r2 + 1, c);
+                PerimeterizeIfNonroomNonentrance(r1 - 1, c);
+                PerimeterizeIfNonroomNonentrance(r2 + 1, c);
             }
         }// /scope
     }
