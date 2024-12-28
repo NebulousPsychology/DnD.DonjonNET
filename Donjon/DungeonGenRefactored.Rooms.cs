@@ -148,64 +148,12 @@ public partial class DungeonGenRefactored
     ///   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     ///   # check for collisions with existing rooms
     /// 
-    ///   my $hit = &sound_room($dungeon,$r1,$c1,$r2,$c2);
-    ///      return $dungeon if ($hit->{'blocked'});
-    ///   my @hit_list = keys %{ $hit };
-    ///   my $n_hits = scalar @hit_list;
-    ///   my $room_id;
-    /// 
-    ///   if ($n_hits == 0) {
-    ///     $room_id = $dungeon->{'n_rooms'} + 1;
-    ///     $dungeon->{'n_rooms'} = $room_id;
-    ///   } else {
-    ///     return $dungeon;
-    ///   }
-    ///   $dungeon->{'last_room_id'} = $room_id;
-    /// 
+    /// emplace_room_collisiontest
     ///   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     ///   # emplace room
-    /// 
-    ///   for ($r = $r1; $r <= $r2; $r++) {
-    ///     for ($c = $c1; $c <= $c2; $c++) {
-    ///       if ($cell->[$r][$c] & $ENTRANCE) {
-    ///         $cell->[$r][$c] &= ~ $ESPACE;
-    ///       } elsif ($cell->[$r][$c] & $PERIMETER) {
-    ///         $cell->[$r][$c] &= ~ $PERIMETER;
-    ///       }
-    ///       $cell->[$r][$c] |= $ROOM | ($room_id << 6);
-    ///     }
-    ///   }
-    ///   my $height = (($r2 - $r1) + 1) * 10;
-    ///   my $width = (($c2 - $c1) + 1) * 10;
-    /// 
-    ///   my $room_data = {
-    ///     'id' => $room_id, 'row' => $r1, 'col' => $c1,
-    ///     'north' => $r1, 'south' => $r2, 'west' => $c1, 'east' => $c2,
-    ///     'height' => $height, 'width' => $width, 'area' => ($height * $width)
-    ///   };
-    ///   $dungeon->{'room'}[$room_id] = $room_data;
-    /// 
+    /// carve
     ///   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    ///   # block corridors from room boundary
-    ///   # check for door openings from adjacent rooms
-    /// 
-    ///   for ($r = $r1 - 1; $r <= $r2 + 1; $r++) {
-    ///     unless ($cell->[$r][$c1 - 1] & ($ROOM | $ENTRANCE)) {
-    ///       $cell->[$r][$c1 - 1] |= $PERIMETER;
-    ///     }
-    ///     unless ($cell->[$r][$c2 + 1] & ($ROOM | $ENTRANCE)) {
-    ///       $cell->[$r][$c2 + 1] |= $PERIMETER;
-    ///     }
-    ///   }
-    ///   for ($c = $c1 - 1; $c <= $c2 + 1; $c++) {
-    ///     unless ($cell->[$r1 - 1][$c] & ($ROOM | $ENTRANCE)) {
-    ///       $cell->[$r1 - 1][$c] |= $PERIMETER;
-    ///     }
-    ///     unless ($cell->[$r2 + 1][$c] & ($ROOM | $ENTRANCE)) {
-    ///       $cell->[$r2 + 1][$c] |= $PERIMETER;
-    ///     }
-    ///   }
-    /// 
+    ///   blockperim
     ///   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     /// 
     ///   return $dungeon;
@@ -251,13 +199,36 @@ public partial class DungeonGenRefactored
         }
     }
 
-    private void emplace_room_carve(Dungeon dungeon, int r1, int c1, int r2, int c2, int proposed_room_id)
+    /// <summary>
+    /// create a room in the designated rectangle
+    /// </summary>
+    /// <remarks><code>
+    ///   for ($r = $r1; $r <= $r2; $r++) {
+    ///     for ($c = $c1; $c <= $c2; $c++) {
+    ///       if ($cell->[$r][$c] & $ENTRANCE) {
+    ///         $cell->[$r][$c] &= ~ $ESPACE;
+    ///       } elsif ($cell->[$r][$c] & $PERIMETER) {
+    ///         $cell->[$r][$c] &= ~ $PERIMETER;
+    ///       }
+    ///       $cell->[$r][$c] |= $ROOM | ($room_id << 6);
+    ///     }
+    ///   }
+    ///   my $height = (($r2 - $r1) + 1) * 10;
+    ///   my $width = (($c2 - $c1) + 1) * 10;
+    /// 
+    ///   my $room_data = {
+    ///     'id' => $room_id, 'row' => $r1, 'col' => $c1,
+    ///     'north' => $r1, 'south' => $r2, 'west' => $c1, 'east' => $c2,
+    ///     'height' => $height, 'width' => $width, 'area' => ($height * $width)
+    ///   };
+    ///   $dungeon->{'room'}[$room_id] = $room_data;
+    /// </code></remarks>
+    private void emplace_room_carve(Dungeon dungeon, Realspace<Rectangle> rect, int proposed_room_id)
     {
         using (logger.BeginScope("mini:emplaceroom"))
         {
             //RASTER: INCLUSIVE <r1,c1>..<r2,c2>
-
-            foreach (var (r, c) in Dim2d.RangeInclusive(r1, r2, c1, c2))
+            foreach (var (r, c) in Dim2d.RangeInclusive(rect))
             {
                 // remove Entrance marker
                 if (dungeon.cell[r, c].HasFlag(Cellbits.ENTRANCE)) //::       if ($cell->[$r][$c] & $ENTRANCE) {
@@ -277,23 +248,29 @@ public partial class DungeonGenRefactored
             }
 
             int cellsize = 1; //! is an alteration vs perl: original specifies 10
-            IDungeonRoom room_data = new DungeonRoomStruct
+            IDungeonRoom room_data = new DungeonRoomRectStruct
             {
                 id = proposed_room_id,
-                row = r1,
-                col = c1,
-                north = r1,
-                south = r2,
-                west = c1,
-                east = c2,
-                height = ((r2 - r1) + 1) * cellsize,
-                width = ((c2 - c1) + 1) * cellsize,
+                Rectangle = rect,
+                // row = rect.Value.Y, // r1,
+                // col = rect.Value.X, // c1,
+                // north = rect.Value.Top, // r1,
+                // south = rect.Value.Bottom - 1, // r2,
+                // west = rect.Value.Left, // c1,
+                // east = rect.Value.Right - 1, // c2,
+                // height = rect.Value.Height, // ((r2 - r1) + 1) * cellsize,
+                // width = rect.Value.Width, // ((c2 - c1) + 1) * cellsize,
                 door = [],
             };
             dungeon.room[proposed_room_id] = room_data;
             logger.LogInformation(message: "AddRoom: {r}", JsonSerializer.Serialize(room_data, jsonLoggingOptions));
         }
     }
+
+    [Obsolete("Prefer Realspace<Rectangle>")]
+    private void emplace_room_carve(Dungeon dungeon, int r1, int c1, int r2, int c2, int proposed_room_id)
+        => emplace_room_carve(dungeon, new Realspace<Rectangle>(new(x: c1, y: r1, width: c2 - c1, height: r2 - r1)), proposed_room_id);
+
 
     /// <summary>
     /// 
@@ -302,6 +279,21 @@ public partial class DungeonGenRefactored
     /// <param name="proposed_room_id">room id, if a new room gets issued</param>
     /// <param name="r">a realspace region, enclosing the coordinates of the proposed room</param>
     /// <returns>true if a new room was issued</returns>
+    /// <remarks><code>
+    ///   my $hit = &sound_room($dungeon,$r1,$c1,$r2,$c2);
+    ///      return $dungeon if ($hit->{'blocked'});
+    ///   my @hit_list = keys %{ $hit };
+    ///   my $n_hits = scalar @hit_list;
+    ///   my $room_id;
+    /// 
+    ///   if ($n_hits == 0) {
+    ///     $room_id = $dungeon->{'n_rooms'} + 1;
+    ///     $dungeon->{'n_rooms'} = $room_id;
+    ///   } else {
+    ///     return $dungeon;
+    ///   }
+    ///   $dungeon->{'last_room_id'} = $room_id;
+    /// </code></remarks>
     bool emplace_room_collisiontest(IDungeon dungeon, out int proposed_room_id, Realspace<Rectangle> rect)
     {
         //RASTER: (coords,if any, comes from a...) HEMI: EXCLUSIVE <0,0>..<nrows/2,ncols/2>
@@ -336,6 +328,24 @@ public partial class DungeonGenRefactored
     /// block corridors from room boundary; check for door openings from adjacent rooms
     /// </summary>
     /// <param name="dungeon"></param>
+    /// <remarks><code>
+    ///   for ($r = $r1 - 1; $r <= $r2 + 1; $r++) {
+    ///     unless ($cell->[$r][$c1 - 1] & ($ROOM | $ENTRANCE)) {
+    ///       $cell->[$r][$c1 - 1] |= $PERIMETER;
+    ///     }
+    ///     unless ($cell->[$r][$c2 + 1] & ($ROOM | $ENTRANCE)) {
+    ///       $cell->[$r][$c2 + 1] |= $PERIMETER;
+    ///     }
+    ///   }
+    ///   for ($c = $c1 - 1; $c <= $c2 + 1; $c++) {
+    ///     unless ($cell->[$r1 - 1][$c] & ($ROOM | $ENTRANCE)) {
+    ///       $cell->[$r1 - 1][$c] |= $PERIMETER;
+    ///     }
+    ///     unless ($cell->[$r2 + 1][$c] & ($ROOM | $ENTRANCE)) {
+    ///       $cell->[$r2 + 1][$c] |= $PERIMETER;
+    ///     }
+    ///   }
+    /// </code></remarks>
     void emplace_room_BlockPerimeter(IDungeon dungeon, Realspace<int> r1, Realspace<int> c1, Realspace<int> r2, Realspace<int> c2)
     {
         void PerimeterizeIfNonroomNonentrance(int r, int c)
