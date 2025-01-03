@@ -1,5 +1,4 @@
 
-using Donjon.Original;
 using Donjon.Test.Utilities;
 
 using Microsoft.Extensions.Logging;
@@ -80,7 +79,12 @@ public class HemispaceTest(ITestOutputHelper outputHelper) : HostedTestBase<Hemi
         var x1 = (proto["j"] * 2) + 1; // 7
         var y2 = ((proto["i"] + proto["height"]) * 2) - 1; //13 : bottom?
         var x2 = ((proto["j"] + proto["width"]) * 2) - 1; // 9 : right
-        // FIXME: the -1 is odd
+        // FIXME: the -1 guarantees an odd value.
+        // +1 on p1 guarantees an odd value, and indicates the BOTTOM RIGHT square of the 4-space realspace potential for the hemispace point.
+        
+        // the rectangle is inclusive of the right and bottom edges
+        // -1 takes the TOP LEFT square (+0) of the 4-space realspace potential for the offset hemispace point, and insets it a further 1,
+            // to refer to the rectangle included last indexed space.
 
         Logger.LogInformation("r_expect: <{a},{b},r{c},b{d}> ", x1, y1, x2, y2);
         // When
