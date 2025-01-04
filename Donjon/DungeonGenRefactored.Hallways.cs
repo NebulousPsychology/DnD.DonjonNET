@@ -41,7 +41,7 @@ public partial class DungeonGenRefactored
 
             //RASTER: HEMI: INCLUSIVE INSET <1,1>..<ni=nrows/2-1 (odd),nj=ncols/2-1 (odd)>
             // from 1,1 to n_i-1,n_j-1, inclusive
-            foreach (var (i, j) in Dim2d.RangeInclusive(1, dungeon.n_i - 1, 1, dungeon.n_j - 1).Cast<(Hemispace<int>, Hemispace<int>)>())
+            foreach (var (i, j) in Dim2d.RangeInclusive(1, dungeon.n_i - 1, 1, dungeon.n_j - 1).AsHemi())
             {
                 var (r, c) = (i, j).ToRealspace();
                 if (dungeon.cell[r, c].HasAnyFlag(Cellbits.CORRIDOR)) // if we see Corridor, we already tunneled at [r,c]

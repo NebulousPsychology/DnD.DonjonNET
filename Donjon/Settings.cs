@@ -10,6 +10,22 @@ public class Settings
     public required RoomSettings Rooms { get; init; }
     public required CorridorSettings Corridors { get; init; }
     public required MapSettings Map { get; init; }
+
+    public static Original.Dungeon CreateLegacy(Settings s) => new()
+    {
+        seed = s.seed,
+        n_rows = s.Dungeon.n_rows,
+        n_cols = s.Dungeon.n_cols,
+        dungeon_layout = s.Dungeon.dungeon_layout,
+        room_min = s.Rooms.room_min,
+        room_max = s.Rooms.room_max,
+        room_layout = s.Rooms.room_layout,
+        corridor_layout = s.Corridors.corridor_layout,
+        remove_deadends = s.Corridors.remove_deadends,
+        add_stairs = s.Corridors.add_stairs,
+        map_style = s.Map.map_style,
+        cell_size = s.Map.cell_size,
+    };
 }
 
 public class DungeonSettings : IDungeonDimensional

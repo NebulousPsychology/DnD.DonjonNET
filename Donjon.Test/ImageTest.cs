@@ -16,7 +16,7 @@ using SixLabors.ImageSharp.Processing;
 using Xunit.Abstractions;
 
 public class ImageTest(ITestOutputHelper outputHelper)
-:HostedTestBase<ImageTest>(outputHelper)
+: HostedTestBase<ImageTest>(outputHelper)
 {
     [Fact]
     public void TestMapImageGeneration()

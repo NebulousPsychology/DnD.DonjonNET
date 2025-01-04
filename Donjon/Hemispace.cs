@@ -57,6 +57,11 @@ public struct Hemispace<T>(T value) //where T : System.Numerics.IAdditionOperato
 
 public static class HemispaceConversionExtensions
 {
+    public static IEnumerable<(Hemispace<int>, Hemispace<int>)> AsHemi(this IEnumerable<(int, int)> proto)
+        => proto.Select(p => (new Hemispace<int>(p.Item1), new Hemispace<int>(p.Item2)));
+    public static IEnumerable<(Realspace<int>, Realspace<int>)> AsRealspace(this IEnumerable<(int, int)> proto)
+        => proto.Select(p => (new Realspace<int>(p.Item1), new Realspace<int>(p.Item2)));
+
     #region tuple-to-tuple
     /// <summary>
     /// expand hemispace to a realspace point that IS GUARANTEED TO BE ODD

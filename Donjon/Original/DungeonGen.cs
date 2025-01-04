@@ -2318,7 +2318,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     public string DescribeDungeon(Dungeon d, int size = 3)
         => DescribeDungeon(d, (cel, r, c) => string.Format($"[{{0,{size}}}]", cel.Summarize()));
 
-    public string DescribeDungeonLite(Dungeon dungeon) => DescribeDungeon(dungeon,
+    public string DescribeDungeonLite(IDungeon dungeon) => dungeon is Dungeon d ? DescribeDungeon(d,
         cellFormatter: (cel, r, c) => cel switch
         {
             Cellbits d when d.HasAnyFlag(Cellbits.DOORSPACE)
@@ -2333,7 +2333,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
             Cellbits d when d.HasAnyFlag(Cellbits.PERIMETER) => "#",//"⨂",
             Cellbits d when d == Cellbits.NOTHING => " ",
             _ => "?"
-        }, preamble: true);
+        }, preamble: true) : throw new ArgumentException("not a Dungeon");
 
     public string IndicatePosition(Dungeon d, int i, int j)
         => DescribeDungeon(d, (cel, r, c) => r == i && c == j ? "X" : "•", preamble: false);

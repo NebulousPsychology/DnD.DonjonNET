@@ -1,5 +1,8 @@
 // Adapted from https://donjon.bin.sh/code/dungeon/dungeon.pl
 // https://creativecommons.org/licenses/by-nc/3.0/
+using System.ComponentModel;
+using System.Text.Json.Serialization;
+
 namespace Donjon.Original;
 #pragma warning disable IDE1006 // Naming Styles
 
@@ -44,6 +47,7 @@ public record Dungeon : Opts, IDungeon
 
     #region IDungeon
     private readonly Lazy<Cellbits[,]> _cellbits;
+    [JsonIgnore]
     public Cellbits[,] cell => _cellbits.Value;
     public Lazy<Random> _random { get; private set; }
     public Random random => _random.Value;

@@ -29,7 +29,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     public RoomIdIssuer MyRoomIssuer { get; } = new RoomIdIssuer(Options.Create(settings.Value.Rooms), Options.Create(settings.Value.Dungeon));
     public IDungeon Create_dungeon()
     {
-        return Create_dungeon(new() { });
+        return Settings.CreateLegacy(settings.Value);
     }
     private static readonly JsonSerializerOptions jsonLoggingOptions = new() { WriteIndented = false };
 
@@ -63,12 +63,12 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
     ///   return $dungeon;
     /// }
     /// </code> </remarks>
-    public Dungeon Create_dungeon(Dungeon dungeon)
+    public IDungeon Create_dungeon(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(Create_dungeon)))
         {
             dungeon = init_cells(dungeon);
-            logger.LogInformation(1, "dungeonState {s}", DescribeDungeon(dungeon));
+            logger.LogInformation(1, "dungeonState {s}", _w.DescribeDungeon(dungeon));
 
             dungeon = emplace_rooms(dungeon);
             logger.LogInformation(2, "dungeonState {s}", DescribeDungeonLite(dungeon));
@@ -91,7 +91,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
 
             logger.LogInformation(7, "Finishing {n}", nameof(Create_dungeon));
         }
-        logger.LogInformation(8, "dungeonState {s}", DescribeDungeon(dungeon));
+        logger.LogInformation(8, "dungeonState {s}", _w.DescribeDungeon(dungeon));
         return dungeon;
     }
     #endregion create dungeon
@@ -396,7 +396,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
 
             //? rowspace/indexspace to enforce odd row/col
             //RASTER: HEMI: EXCLUSIVE-high [<0,0>..<ni=nrows/2(E),nj=ncols/2(E)>)
-            foreach (var (i, j) in Dim2d.RangeInclusive(0, dungeon.n_i - 1, 0, dungeon.n_j - 1).Cast<(Hemispace<int>, Hemispace<int>)>())
+            foreach (var (i, j) in Dim2d.RangeInclusive(0, dungeon.n_i - 1, 0, dungeon.n_j - 1).AsHemi())
             {
                 // r,c reconstituted (as every-other? odd)
                 var (r, c) = (i, j).ToRealspace();
@@ -516,8 +516,7 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
 
             //RASTER: HEMI: ExCLUSIVE High  [<0,0> .. <ni=nrows/2-1(o),nj=ncols/2-1(o)]
             foreach (var (r, c) in Dim2d.RangeInclusive(0, dungeon.n_i - 1, 0, dungeon.n_j - 1)
-                .Cast<(Hemispace<int>, Hemispace<int>)>()
-                .Select(ij => ij.ToRealspace()))
+                .AsHemi().Select(ij => ij.ToRealspace()))
             {
                 logger.LogTrace("about to collapse ({r},{c})", r, c);
                 //::       next unless ($cell->[$r][$c] & $OPENSPACE);
@@ -792,65 +791,8 @@ public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFa
 
     #endregion Final Cleanup
 
-    public string DescribeDungeon(Dungeon d, Func<Cellbits, int, int, string> cellFormatter, string separator = " ", bool preamble = true)
-    {
-        System.Text.StringBuilder b = new();
-        if (preamble)
-        {
-            b.AppendLine($"seed:{d.seed} {d.n_rows}x{d.n_cols} csz={d.cell_size} dun{d.dungeon_layout} cor{d.corridor_layout}");
-            b.AppendLine($"nrooms:{d.n_rooms} actual:{d.room.Count} last='{d.last_room_id?.ToString() ?? "nul"}' sz({d.room_min}..{d.room_max})");
-            foreach (var item in d.room)
-            {
-                b.Append($"    key'{item.Key}' [id{item.Value.id}] | ({item.Value.north},{item.Value.west})..({item.Value.south},{item.Value.east})");
-                b.AppendLine($" | {item.Value.height}v x {item.Value.width}h = {item.Value.area}");
-            }
-
-
-            b.AppendLine($"ndoor:{d.door.Count}");
-            foreach (var item in d.door.OrderBy(dr => dr.col).OrderBy(dr => dr.row))
-            {
-                b.AppendLine($"    ({item.row,3},{item.col,3}) {item.key} oid{item.out_id?.ToString() ?? "_"} {item.type} :'{item.desc}' :: {d.cell[item.row, item.col] & ~Cellbits.LABELSPACE}");
-            }
-
-            b.AppendLine($"nStair:{d.stair.Count}");
-            foreach (var item in d.stair)
-            {
-                b.AppendLine(item is null ? "    null" : $"    ({item.row},{item.col}) {item.key} next:({item.next_row},{item.next_col})");
-            }
-        }
-        b.AppendLine($"        {string.Join(separator, Enumerable.Range(0, d.n_cols).Select(c => c % 10))}");
-        for (int r = 0; r < d.cell.GetLength(0); r++)
-        {
-            b.AppendFormat("{0,4}:: [", r);
-            var line = Enumerable.Range(0, d.cell.GetLength(1))
-                .Select(c => cellFormatter(d.cell[r, c], r, c));
-            b.AppendJoin(separator, line);
-            b.AppendLine("]");
-        }
-        return b.ToString();
-    }
-
-    public string DescribeDungeon(Dungeon d, int size = 3)
-        => DescribeDungeon(d, (cel, r, c) => string.Format($"[{{0,{size}}}]", cel.Summarize()));
-
-    public string DescribeDungeonLite(Dungeon dungeon) => DescribeDungeon(dungeon,
-        cellFormatter: (cel, r, c) => cel switch
-        {
-            Cellbits d when d.HasAnyFlag(Cellbits.DOORSPACE)
-                && dungeon.door.Any(door => door.Coord == (r, c)) => "D",//"D",
-            Cellbits d when d.HasAnyFlag(Cellbits.DOORSPACE) => "Ð",//"D",
-            Cellbits d when d.HasAnyFlag(Cellbits.STAIR_UP) => "^",
-            Cellbits d when d.HasAnyFlag(Cellbits.STAIR_DN) => "v",
-            Cellbits d when d.HasAnyFlag(Cellbits.ROOM) => "·",
-            Cellbits d when d.HasAnyFlag(Cellbits.CORRIDOR) => "+",//"◇",
-            Cellbits d when d.HasAnyFlag(Cellbits.ENTRANCE) => "E",
-            Cellbits d when d.HasAnyFlag(Cellbits.BLOCKED) => "x",
-            Cellbits d when d.HasAnyFlag(Cellbits.PERIMETER) => "#",//"⨂",
-            Cellbits d when d == Cellbits.NOTHING => " ",
-            _ => "?"
-        }, preamble: true);
-
-    public string IndicatePosition(Dungeon d, int i, int j)
-        => DescribeDungeon(d, (cel, r, c) => r == i && c == j ? "X" : "•", preamble: false);
+    private DungeonWriter _w = new();
+    public string DescribeDungeonLite(IDungeon dungeon)=> _w.DescribeDungeonLite(dungeon);
+    public string IndicatePosition(Dungeon d, int i, int j)=>_w.IndicatePosition(d, i, j);
 }
 #pragma warning restore IDE1006 // Naming Styles
