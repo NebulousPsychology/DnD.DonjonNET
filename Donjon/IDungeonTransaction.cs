@@ -1,6 +1,7 @@
 
-using Donjon;
 using Donjon.Original;
+
+namespace Donjon;
 
 public interface ITransaction<TArg>
 {
@@ -33,18 +34,20 @@ public interface IReversibleTransaction<TArg> : ITransaction<TArg>
     /// <returns></returns>
     public bool IsInPostcondition(TArg context);
 
+    /// <summary>
+    /// Thrown when an Exact undo is not starting from the command's After state
+    /// </summary>
     public class InexactUndoException : InvalidOperationException { }
 }
 
-class SingleCellChangeCommand : ITransaction<IDungeon>
+public class SingleCellChangeCommand : ITransaction<IDungeon>
 {
-    protected (int, int) Coordinate { get; init; }
+    public (int, int) Coordinate { get; init; }
     protected Cellbits After { get; init; }
     public SingleCellChangeCommand(int row, int col, Cellbits endState)
     {
         Coordinate = (row, col);
         After = endState;
-
     }
 
     public void Execute(IDungeon d)
@@ -53,7 +56,7 @@ class SingleCellChangeCommand : ITransaction<IDungeon>
     }
 
 }
-class ReversibleSingleCellChangeCommand : SingleCellChangeCommand, IReversibleTransaction<IDungeon>
+public class ReversibleSingleCellChangeCommand : SingleCellChangeCommand, IReversibleTransaction<IDungeon>
 {
     public ReversibleSingleCellChangeCommand(int row, int col, Cellbits startState, Cellbits endState)
     : base(row, col, endState)
@@ -86,6 +89,11 @@ class ReversibleSingleCellChangeCommand : SingleCellChangeCommand, IReversibleTr
 
 public class MultipleCellTransaction : IReversibleTransaction<IDungeon>
 {
+    public MultipleCellTransaction Add(ReversibleSingleCellChangeCommand c)
+    {
+        commands.Add(c.Coordinate, c);
+        return this;
+    }
     Dictionary<(int, int), ReversibleSingleCellChangeCommand> commands = [];
     public void Execute(IDungeon d)
     {
