@@ -3,6 +3,15 @@ using System.Collections;
 
 namespace Donjon;
 
+/// <summary>
+/// an enumerator that produces indices to traverse a raster in row-major or column-major order
+/// </summary>
+/// <param name="rowEnd"></param>
+/// <param name="colEnd"></param>
+/// <param name="rowStart"></param>
+/// <param name="colStart"></param>
+/// <param name="rowMajor"></param>
+/// <param name="inclusive"></param>
 public class RasterEnumerator(int rowEnd, int colEnd, int rowStart = 0, int colStart = 0, bool rowMajor = true, bool inclusive = false)
   : IEnumerator<(int r, int c)>
 {
