@@ -12,7 +12,8 @@ public interface IDungeonRoomIssuer
     public TRoomId n_rooms { get; } //? should this be a member of opts?
 
     /// <summary>last room_id issued</summary>
-    public TRoomId? last_room_id { get; } 
+    public TRoomId? last_room_id { get; }
+    public bool TryIssueRoom(out TRoomId id);
 }
 
 public class RoomIdIssuer(IOptions<RoomSettings> roomSettings, IOptions<DungeonSettings> dSettings)
@@ -47,5 +48,11 @@ public class RoomIdIssuer(IOptions<RoomSettings> roomSettings, IOptions<DungeonS
         int dungeon_area = dSettings.Value.n_cols * dSettings.Value.n_rows;
         int room_area = roomSettings.Value.room_max * roomSettings.Value.room_max; // will not be zero if any room at all
         return dungeon_area / room_area;
+    }
+
+    public bool TryIssueRoom(out TRoomId id)
+    {
+        id = Current;
+        return MoveNext();
     }
 }

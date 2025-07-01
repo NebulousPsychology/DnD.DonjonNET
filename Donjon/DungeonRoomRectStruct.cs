@@ -1,24 +1,26 @@
-// Adapted from https://donjon.bin.sh/code/dungeon/dungeon.pl
-// https://creativecommons.org/licenses/by-nc/3.0/
 using System.Diagnostics;
 
-namespace Donjon.Original;
-#pragma warning disable IDE1006 // Naming Styles
+using Donjon.Original;
+
+using SixLabors.ImageSharp;
+namespace Donjon;
 
 [DebuggerDisplay("{id}, ({north},{west})..({south},{east}), a={area}, {door.Count}door")]
-public struct DungeonRoomStruct : IDungeonRoom
+public struct DungeonRoomRectStruct : IDungeonRoom
 {
     public required Dictionary<Cardinal, List<DoorData>> door { get; init; }
     public int id { get; init; }
-    public int north { get; init; }
-    public int south { get; init; }
-    public int east { get; init; }
-    public int west { get; init; }
-    public int row { get; init; }
-    public int col { get; init; }
-    public int height { get; init; }
-    public int width { get; init; }
+    public required Realspace<Rectangle> Rectangle { get; set; }
+    public readonly int north => Rectangle.Value.Top;
+    public readonly int south => Rectangle.Value.Bottom;//? -1?
+    public readonly int east => Rectangle.Value.Right;//? -1?
+    public readonly int west => Rectangle.Value.Left;
+    public readonly int row => Rectangle.Value.Y;
+    public readonly int col => Rectangle.Value.X;
+    public readonly int height => Rectangle.Value.Height;
+    public readonly int width => Rectangle.Value.Width;
     public readonly int area => height * width;
+
     public readonly bool Equals(IDungeonRoom? other)
     {
         return other is not null &&
@@ -38,4 +40,3 @@ public struct DungeonRoomStruct : IDungeonRoom
     }
 }
 
-#pragma warning restore IDE1006 // Naming Styles

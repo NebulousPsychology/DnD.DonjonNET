@@ -1,11 +1,18 @@
+using System.Text.Json;
+
 namespace Donjon;
 #pragma warning disable IDE1006 // Naming Styles
 
 public class Settings
 {
     public long seed { get; set; }
+    public required DungeonSettings Dungeon { get; init; }
+    public required RoomSettings Rooms { get; init; }
+    public required CorridorSettings Corridors { get; init; }
+    public required MapSettings Map { get; init; }
 }
-public class DungeonSettings
+
+public class DungeonSettings : IDungeonDimensional
 {
     /// <remarks>must be odd</remarks
     public int n_rows { get; init { ArgumentOutOfRangeException.ThrowIfZero(value % 2); field = value; } } = 39;
@@ -20,6 +27,19 @@ public class DungeonSettings
 
     enum Layout { None, Box, Cross }
 
+    #region IDungeonDimensional
+    /// <summary>half rows, will be even by intcast</summary>
+    public int n_i => n_rows / 2;
+
+    /// <summary>half cols, will be even by intcast</summary>
+    public int n_j => n_cols / 2;
+
+    /// <summary>inclusive-max index of rows (will be even by -1)</summary>
+    public int max_row => n_rows - 1;
+
+    /// <summary>inclusive-max index of cols (will be even by -1)</summary>
+    public int max_col => n_cols - 1;
+    #endregion IDungeonDimensional
 }
 
 public class RoomSettings
@@ -29,13 +49,19 @@ public class RoomSettings
 
     ///<summary> maximum room size</summary>
     public int room_max = 9;
+
     public Original.RoomLayout room_layout = Original.RoomLayout.Scattered;
+
+    /// <summary> (room_min[3] + 1) / 2 </summary>
+    public int room_base => (room_min + 1) / 2;
+
+    /// <summary> (room_max[9] - room_min[3]) / 2 + 1 </summary>
+    public int room_radix => (room_max - room_min) / 2 + 1;
 }
 
 
 public class CorridorSettings
 {
-
     /// <summary>Bent, Labyrinth, or Straight</summary>
     /// <see cref="DungeonGen.corridor_layout"/>
     /// <see cref="CorridorLayout"/>
@@ -60,3 +86,10 @@ public class MapSettings
 }
 
 #pragma warning restore IDE1006 // Naming Styles
+
+public static class JsonExtensions
+{
+    readonly static JsonSerializerOptions Indented = new(JsonSerializerDefaults.General) { WriteIndented = true };
+    readonly static JsonSerializerOptions Default = new(JsonSerializerDefaults.General);
+    public static string ToJson<T>(this T self, bool indent = false) => JsonSerializer.Serialize(self, indent ? Indented : Default);
+}
