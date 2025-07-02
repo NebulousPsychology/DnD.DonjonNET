@@ -1,6 +1,8 @@
 
 using Donjon.Original;
 
+using SixLabors.ImageSharp;
+
 namespace Donjon;
 
 public interface ITransaction<TArg>
@@ -123,5 +125,41 @@ public class MultipleCellTransaction : IReversibleTransaction<IDungeon>
         {
             c.UndoExactly(d);
         }
+    }
+}
+
+public class CellCallbackTransaction(Point coord, Func<Cellbits, Cellbits> func) : IReversibleTransaction<IDungeon>
+{
+    public Cellbits? Before { get; private set; } = null;
+
+    public void Execute(IDungeon d)
+    {
+        Before = d.cell[coord.Row(), coord.Col()];
+        d.cell[coord.Row(), coord.Col()] = func(d.cell[coord.Row(), coord.Col()]);
+    }
+
+    public bool IsInPostcondition(IDungeon context) => Before.HasValue;
+
+    public void Undo(IDungeon d)
+    {
+        if (Before is Cellbits b)
+        {
+            d.cell[coord.Row(), coord.Col()] = b;
+            Before = null;
+        }
+    }
+}
+
+class CellTransactionBuilder
+{
+    public CellTransactionBuilder SetCoords(Point p) { return this; }
+    public CellTransactionBuilder Transform(Func<Cellbits, Cellbits> fn)
+    {
+        return this;
+    }
+    public ReversibleSingleCellChangeCommand Build()
+    {
+        // return new ReversibleSingleCellChangeCommand();
+        throw new NotImplementedException();
     }
 }
