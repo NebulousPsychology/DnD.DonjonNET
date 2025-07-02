@@ -2,6 +2,7 @@
 using System.Text.Json;
 
 using Donjon.Original;
+using Donjon.Rooms.Commands;
 
 using Microsoft.Extensions.Logging;
 
@@ -121,24 +122,29 @@ namespace Donjon
                 if (sills_list is null) return dungeon;
                 int n_opens = alloc_opens(dungeon, room);
 
+                #region OpenManyDoorsCommand? (n_opens,sills_list,dungeon, room )
                 for (int i = 0; i < n_opens; i++)
                 {
                     //     my $sill = splice(@list,int(rand(@list)),1);
                     //        last unless ($sill);
                     if (!sills_list.Any()) break;
-                    #region OpenDoorCommand
+                    if (OpenDoorCommand.TryCreate(dungeon.random, sills_list, out var doorCmd))
+                    {
+                        // ... add to registry (manydoors cmd?)
+                    }
+                    #region OpenDoorCmd (sill,dungeon,room)
                     Sill sill = sills_list.ElementAt(dungeon.random.Next(sills_list.Count()));
 
-                    int door_r = sill.door_r;
-                    int door_c = sill.door_c;
-                    var door_cell = dungeon.cell[door_r, door_c];
+                    int sill_door_r = sill.door_r;
+                    int sill_door_c = sill.door_c;
+                    var door_cell = dungeon.cell[sill_door_r, sill_door_c];
                     //        redo if ($door_cell & $DOORSPACE);
                     //! `redo` is a perl notion that C# cannot replicate: If the condition inside the if statement is true, 
                     //! the loop restarts from the beginning, AFTER the increment is applied
                     // ? is this why testing for connections by name is needed?
                     // ? when combined with sillfetching by `dungeon.random.Next(list.Count())`,
                     // ? it will walk past already succesful sills until it can try a new one
-                    if (door_cell.HasAnyFlag(Cellbits.DOORSPACE)) { i = -1; continue; }
+                    if (dungeon.cell[sill.door_r, sill.door_c].HasAnyFlag(Cellbits.DOORSPACE)) { i = -1; continue; }
 
                     switch (sill.AttemptConnection(dungeon, room))
                     {
@@ -169,42 +175,36 @@ namespace Donjon
                         }
                         Cellbits door_type = getdoor_type(dungeon.random);
 
-                        (char? sign, string key, string type)? doorinfo = door_type switch
+                        try
                         {
-                            Cellbits.DOOR_ARCH => (sign: null, key: "arch", type: "Archway"),
-                            Cellbits.DOOR_SIMPLE => (sign: 'o', key: "open", type: "Unlocked Door"),
-                            Cellbits.DOOR_LOCKED => (sign: 'x', key: "lock", type: "Locked Door"),
-                            Cellbits.DOOR_TRAPPED => (sign: 't', key: "trap", type: "Trapped Door"),
-                            Cellbits.DOOR_SECRET => (sign: 's', key: "secret", type: "Secret Door"),
-                            Cellbits.DOOR_PORTC => (sign: '#', key: "portc", type: "Portcullis"),
-                            _ => throw new InvalidOperationException($"SWW: unrecognized door type {door_type}"),
-                        };
-                        if (doorinfo.HasValue)
-                        {
-                            logger.LogTrace("working on door {d} at ({r},{c})", doorinfo, door_r, door_c);
-                            dungeon.cell[door_r, door_c] |= door_type;
-                            dungeon.cell[door_r, door_c].SetLabel(doorinfo?.sign ?? (char)0);
+                            (char? sign, string key, string type) doorinfo = lookup_doorinfo(door_type);
+
+                            logger.LogTrace("working on door {d} at ({r},{c})", doorinfo, sill_door_r, sill_door_c);
+                            dungeon.cell[sill_door_r, sill_door_c] |= door_type;
+                            dungeon.cell[sill_door_r, sill_door_c].SetLabel(doorinfo.sign ?? (char)0);
                             var door = new DoorData
                             {
-                                row = door_r,
-                                col = door_c,
+                                row = sill_door_r,
+                                col = sill_door_c,
                                 open_dir = open_dir,
-                                key = doorinfo!.Value.key,
-                                type = doorinfo!.Value.type,
+                                key = doorinfo.key,
+                                type = doorinfo.type,
                                 out_id = sill.out_id
                             };
 
                             //     push(@{ $room->{'door'}{$open_dir} },$door) if ($door); 
                             if (!room.door.TryAdd(open_dir, [door])) room.door[open_dir].Add(door);
-                            logger.LogInformation("Add door {d} at ({r},{c})", doorinfo, door_r, door_c);
+                            logger.LogInformation("Add door {d} at ({r},{c})", doorinfo, sill_door_r, sill_door_c);
                         }
-                        else
+                        catch (InvalidOperationException _)
                         {
-                            logger.LogTrace("rejected door at ({r},{c})", door_r, door_c);
+                            logger.LogTrace("rejected door at ({r},{c})", sill_door_r, sill_door_c);
                         }
+
                     }// /scope Opendoor
-                    #endregion OpenDoorCommand
+                    #endregion OpenDoorCmd  
                 }
+                #endregion OpenManyDoorsCommand
                 logger.LogInformation("Opened {actual} doors for {expected} attempts", room.door.Sum(directionkvp => directionkvp.Value.Count), n_opens);
                 return dungeon;
             }
@@ -424,6 +424,30 @@ namespace Donjon
             }
         }
         #endregion doors/corridors
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="door_type"></param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException">if non-doorspace or if undefined doorinfo</exception>
+        (char? sign, string key, string type) lookup_doorinfo(Cellbits door_type)
+        {
+            if (!door_type.HasAnyFlag(Cellbits.DOORSPACE))
+                throw new InvalidOperationException($"SWW: Not in Doorspace: {door_type}");
+
+            return door_type switch
+            {
+                Cellbits.DOOR_ARCH => (sign: null, key: "arch", type: "Archway"),
+                Cellbits.DOOR_SIMPLE => (sign: 'o', key: "open", type: "Unlocked Door"),
+                Cellbits.DOOR_LOCKED => (sign: 'x', key: "lock", type: "Locked Door"),
+                Cellbits.DOOR_TRAPPED => (sign: 't', key: "trap", type: "Trapped Door"),
+                Cellbits.DOOR_SECRET => (sign: 's', key: "secret", type: "Secret Door"),
+                Cellbits.DOOR_PORTC => (sign: '#', key: "portc", type: "Portcullis"),
+                _ => throw new InvalidOperationException($"SWW: No sign/key/type on record: {door_type}"),
+            };
+        }
     }
 
     static class SillHelper
@@ -491,7 +515,7 @@ namespace Donjon
     }
     namespace Rooms.Commands
     {
-        class OpenDoorCommand : IReversibleTransaction<IDungeon>
+        class OpenDoorCommand //: IReversibleTransaction<IDungeon>
         {
             required public int SillIndex { get; init; }
             required public Cellbits DoorType { get; init; }
@@ -509,21 +533,19 @@ namespace Donjon
                 throw new NotImplementedException();
             }
 
-            public void Undo(IDungeon d)
+            public static bool TryCreate(Random rng, IEnumerable<Sill> sills, out OpenDoorCommand? cmd)
             {
-                throw new NotImplementedException();
+                cmd = null;
+                return false;
             }
 
-            public bool IsInPostcondition(IDungeon context)
-            {
-                throw new NotImplementedException();
-            }
-
-            public void Execute(IDungeon d)
-            {
-                throw new NotImplementedException();
-            }
             // Execute/Undo use SillIndex and DoorType, not new randoms
+            // Effects:
+            // - 4x in sill-open directions: strips Perimeter, or's Entrance
+            // - or's the doortype flag into the cell bits
+            // - sets the label bits to the doortype's sign
+            // - ADDS a DoorData to the room's reflist for the appropriate edge
+            //    UNLESS
         }
     }
 }

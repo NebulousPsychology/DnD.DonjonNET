@@ -33,6 +33,13 @@ public static class CellbitsExtensions
         label = 0;
         return false;
     }
+    /// <summary>
+    /// Bitwise-Or's a char into the top 8 bits of the UInt32
+    /// FIXME: `char` is UTF16; a 2-byte size
+    /// </summary>
+    /// <param name="cell"></param>
+    /// <param name="c"></param>
+    /// <returns></returns>
     public static Cellbits SetLabel(this Cellbits cell, char c) => cell | (Cellbits)(c << 24);
 
     /// <summary>determine if any of the bits set in mask are set</summary>
