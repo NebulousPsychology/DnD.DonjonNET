@@ -1,7 +1,7 @@
 using Donjon.Original;
 
 namespace Donjon;
-public class DungeonWriter : IDungeonDescriber
+public class DungeonWriter : IDungeonDescriber<string>
 {
     public void WriteDungeonGrid(TextWriter writer, IDungeon d, Func<Cellbits, int, int, string>? cellFormatter = null, string separator = " ")
     {

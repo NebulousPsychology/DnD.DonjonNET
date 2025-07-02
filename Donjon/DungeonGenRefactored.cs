@@ -21,7 +21,9 @@ namespace Donjon;
 /// # http://creativecommons.org/licenses/by-nc/3.0/
 /// </summary>
 /// <typeparam name="DungeonGenRefactored"></typeparam>
-public partial class DungeonGenRefactored(IOptions<Settings> settings, ILoggerFactory loggerFactory) : IDungeonGenerator
+public partial class DungeonGenRefactored(
+    IOptions<Settings> settings,
+    ILoggerFactory loggerFactory) : IDungeonGenerator
 {
     private ILogger<DungeonGenRefactored> logger { get; } = loggerFactory?.CreateLogger<DungeonGenRefactored>()
         ?? NullLogger<DungeonGenRefactored>.Instance;

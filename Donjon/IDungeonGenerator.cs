@@ -12,9 +12,9 @@ interface IDungeonGenerator //: IDungeonDescriber
     protected IDungeonRoomIssuer RoomIssuer { get; }
 }
 
-interface IDungeonDescriber
+interface IDungeonDescriber<TOutput>
 {
-    public string DescribeDungeonLite(IDungeon dungeon);
+    public TOutput DescribeDungeonLite(IDungeon dungeon);
 }
 
 interface IRoomPlacement
