@@ -117,47 +117,40 @@ namespace Donjon
             using (logger.BeginScope(nameof(open_room)))
             {
                 logger.LogInformation("opening room {room}", JsonSerializer.Serialize(room, jsonLoggingOptions));
-                IEnumerable<Sill> list = door_sills(dungeon, room);
-                if (list is null) return dungeon;
+                IEnumerable<Sill> sills_list = door_sills(dungeon, room);
+                if (sills_list is null) return dungeon;
                 int n_opens = alloc_opens(dungeon, room);
 
                 for (int i = 0; i < n_opens; i++)
                 {
                     //     my $sill = splice(@list,int(rand(@list)),1);
                     //        last unless ($sill);
-                    if (!list.Any()) break;
-                    Sill sill = list.ElementAt(dungeon.random.Next(list.Count()));
+                    if (!sills_list.Any()) break;
+                    #region OpenDoorCommand
+                    Sill sill = sills_list.ElementAt(dungeon.random.Next(sills_list.Count()));
 
                     int door_r = sill.door_r;
                     int door_c = sill.door_c;
                     var door_cell = dungeon.cell[door_r, door_c];
                     //        redo if ($door_cell & $DOORSPACE);
-                    if ((door_cell & Cellbits.DOORSPACE) != 0) { i = -1; continue; }
+                    //! `redo` is a perl notion that C# cannot replicate: If the condition inside the if statement is true, 
+                    //! the loop restarts from the beginning, AFTER the increment is applied
+                    // ? is this why testing for connections by name is needed?
+                    // ? when combined with sillfetching by `dungeon.random.Next(list.Count())`,
+                    // ? it will walk past already succesful sills until it can try a new one
+                    if (door_cell.HasAnyFlag(Cellbits.DOORSPACE)) { i = -1; continue; }
 
-                    if (sill.out_id.HasValue)
+                    switch (sill.AttemptConnection(dungeon, room))
                     {
-                        //? constructs the connection string and checks if it has been used before
-                        //       my $connect = join(',',(sort($room->{'id'},$out_id)));
-                        string connect = string.Join(",", Enumerable.Order([room.id, sill.out_id.Value]));
-                        //       redo if ($dungeon->{'connect'}{$connect}++);
-                        if (dungeon.connect?.TryGetValue(connect, out int connectionCount) ?? false)
-                        {
-                            if (connectionCount > room.Perimeter)
-                            {
-                                logger.LogDebug("count ({v}) exceeds room perimiter ({p}) for connection {conn}",
-                                    connectionCount, room.Perimeter, connect);
-                                continue;
-                            }
-                            dungeon.connect![connect] = connectionCount + 1;
-                            //! `redo` is a perl notion that C# cannot replicate: If the condition inside the if statement is true, 
-                            //! the loop restarts from the beginning, AFTER the increment is applied
-                            i = -1; continue;
-                        }
-                        else if (dungeon.connect?.TryAdd(connect, 1) ?? false)
-                        {
-                            //! adds, but does not restart 
-                        }
+                        case SillHelper.SillActionKind.EXCEEDS_PERIMETER:
+                            continue;
+                        case SillHelper.SillActionKind.RESTART:
+                            i = -1;
+                            continue;
+                        case SillHelper.SillActionKind.CONNECTION_MADE: break;
+                        case SillHelper.SillActionKind.CONTINUE: break;
                     }
+                    ;
                     var open_r = sill.sill_r;
                     var open_c = sill.sill_c;
                     Cardinal open_dir = sill.dir;
@@ -210,13 +203,14 @@ namespace Donjon
                             logger.LogTrace("rejected door at ({r},{c})", door_r, door_c);
                         }
                     }// /scope Opendoor
+                    #endregion OpenDoorCommand
                 }
                 logger.LogInformation("Opened {actual} doors for {expected} attempts", room.door.Sum(directionkvp => directionkvp.Value.Count), n_opens);
                 return dungeon;
             }
         }
 
-        ///<summary> allocate number of opens for the room</summary>
+        ///<summary> allocate number of opens for the room, randomized upto sqrt(hemispace area)</summary>
         /// <remarks><code>
         /// sub alloc_opens {
         ///   my ($dungeon,$room) = @_;
@@ -241,7 +235,7 @@ namespace Donjon
         }
 
 
-        ///<summary> list available sills</summary>
+        ///<summary> list available sills, shuffled </summary>
         /// <remarks><code>
         /// sub door_sills {
         ///   my ($dungeon,$room) = @_;
@@ -432,7 +426,104 @@ namespace Donjon
         #endregion doors/corridors
     }
 
+    static class SillHelper
+    {
+        public enum SillActionKind
+        {
+            CONTINUE,
+            /// <summary>
+            /// Successfully added the sill to dungeon's connection dictionary
+            /// </summary>
+            CONNECTION_MADE,
+
+            /// <summary>
+            ///  no further connections possible, SKIP FURTHER DOOR OPS
+            /// </summary>
+            EXCEEDS_PERIMETER,
+            /// <summary>
+            /// increment dungeon's connection count, and RESTART
+            /// </summary>
+            RESTART,
+        }
+        /// <summary>
+        /// effects: 
+        /// </summary>
+        /// <param name="sill"></param>
+        /// <param name="dungeon"></param>
+        /// <param name="room"></param>
+        /// <returns></returns>
+        public static SillActionKind AttemptConnection(
+            this Sill sill, Dungeon dungeon, IDungeonRoom room
+            )
+        {
+            if (sill.out_id.HasValue)
+            {
+                //? constructs the connection string and checks if it has been used before
+                //       my $connect = join(',',(sort($room->{'id'},$out_id)));
+                string connect = string.Join(",", Enumerable.Order([room.id, sill.out_id.Value]));
+                //       redo if ($dungeon->{'connect'}{$connect}++);
+                if (dungeon.connect?.TryGetValue(connect, out int connectionCount) ?? false)
+                {
+                    if (connectionCount > room.Perimeter)
+                    {
+                        // logger.LogDebug("count ({v}) exceeds room perimiter ({p}) for connection {conn}",
+                        //     connectionCount, room.Perimeter, connect);
+                        // continue;
+                        // CASE 1: no further connections possible, SKIP FURTHER DOOR OPS
+                        return SillActionKind.EXCEEDS_PERIMETER;
+                    }
+                    dungeon.connect![connect] = connectionCount + 1;
+                    // CASE 2: increment connection count, and RESTART
+                    //! `redo` is a perl notion that C# cannot replicate: If the condition inside the if statement is true, 
+                    //! the loop restarts from the beginning, AFTER the increment is applied
+                    // i = -1; continue;
+                    return SillActionKind.RESTART;
+                }
+                else if (dungeon.connect?.TryAdd(connect, 1) ?? false)
+                {
+                    // Successfully added the sill to dungeon's connection dictionary
+                    //! adds, but does not restart
+                    return SillActionKind.CONNECTION_MADE;
+                }
+            }
+            return SillActionKind.CONTINUE;
+        }
+    }
     namespace Rooms.Commands
     {
+        class OpenDoorCommand : IReversibleTransaction<IDungeon>
+        {
+            required public int SillIndex { get; init; }
+            required public Cellbits DoorType { get; init; }
+            // ... other state
+
+            public OpenDoorCommand(Random rng, List<Sill> sills)
+            {
+                SillIndex = rng.Next(sills.Count);
+                DoorType = GetDoorType(rng);
+                // ... store other random choices
+            }
+
+            private Cellbits GetDoorType(Random rng)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Undo(IDungeon d)
+            {
+                throw new NotImplementedException();
+            }
+
+            public bool IsInPostcondition(IDungeon context)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Execute(IDungeon d)
+            {
+                throw new NotImplementedException();
+            }
+            // Execute/Undo use SillIndex and DoorType, not new randoms
+        }
     }
 }

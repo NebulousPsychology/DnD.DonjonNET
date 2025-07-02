@@ -5,27 +5,27 @@ using SixLabors.ImageSharp;
 
 namespace Donjon;
 
-public interface ITransaction<TArg>
+public interface ITransaction<TReceiver>
 {
-    public void Execute(TArg d);
+    public void Execute(TReceiver d);
 }
-public interface IReversibleTransaction<TArg> : ITransaction<TArg>
+public interface IReversibleTransaction<TReceiver> : ITransaction<TReceiver>
 {
     /// <summary>
     /// revert the transaction 
     /// </summary>
     /// <param name="d"></param>
-    public void Undo(TArg d);
+    public void Undo(TReceiver d);
     /// <summary>
     /// revert the transaction, requiring that the condition before the Undo is 
     /// exactly the state that resulted from the Execute.
     /// </summary>
     /// <param name="d"></param>
     /// <exception cref="InexactUndoException"/>
-    public void UndoExactly(TArg d)
+    public void UndoExactly(TReceiver d)
     {
         if (!IsInPostcondition(d))
-            throw new IReversibleTransaction<TArg>.InexactUndoException();
+            throw new IReversibleTransaction<TReceiver>.InexactUndoException();
         this.Undo(d);
     }
     /// <summary>
@@ -34,7 +34,7 @@ public interface IReversibleTransaction<TArg> : ITransaction<TArg>
     /// </summary>
     /// <param name="context"></param>
     /// <returns></returns>
-    public bool IsInPostcondition(TArg context);
+    public bool IsInPostcondition(TReceiver context);
 
     /// <summary>
     /// Thrown when an Exact undo is not starting from the command's After state
