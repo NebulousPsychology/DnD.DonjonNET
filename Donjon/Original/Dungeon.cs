@@ -5,28 +5,38 @@ namespace Donjon.Original;
 
 public record Dungeon : Opts
 {
+    #region IDungeonRoomIssuer
     /// <summary>number of room_ids issued (and the source counter for issuing them)  </summary>
     public int n_rooms = 0; //? should this be a member of opts?
 
     /// <summary>last room_id issued</summary>
     public int? last_room_id;
+    #endregion IDungeonRoomIssuer
 
-    /// <summary>half rows</summary>
+    #region IDungeonDimensional
+    /// <summary>half rows, will be even by int cast</summary>
     public int n_i => n_rows / 2;
 
-    /// <summary>half cols</summary>
+    /// <summary>half cols, will be even by int cast</summary>
     public int n_j => n_cols / 2;
 
-    /// <summary>inclusive-max index of rows</summary>
+    /// <summary>inclusive-max index of rows (will be even by -1)</summary>
     public int max_row => n_rows - 1;
 
-    /// <summary>inclusive-max index of cols</summary>
+    /// <summary>inclusive-max index of cols (will be even by -1)</summary>
     public int max_col => n_cols - 1;
 
+    #endregion IDungeonDimensional
+
+    #region RoomSettings-derived
+    /// <summary> (room_min[3] + 1) / 2 </summary>
     public int room_base => (room_min + 1) / 2;
 
+    /// <summary> (room_max[9] - room_min[3]) / 2 + 1 </summary>
     public int room_radix => (room_max - room_min) / 2 + 1;
+    #endregion RoomSettings-derived
 
+    #region IDungeon
     private readonly Lazy<Cellbits[,]> _cellbits;
     public Cellbits[,] cell => _cellbits.Value;
     public Lazy<Random> _random { get; private set; }
@@ -35,6 +45,7 @@ public record Dungeon : Opts
     public Dictionary<object, IDungeonRoom> room { get; private set; } = [];
     public List<DoorData> door { get; private set; } = [];
     public List<StairEnd?> stair { get; private set; } = [];
+    #endregion IDungeon
 
     public Dungeon() : this(new Opts())
     {
