@@ -89,39 +89,39 @@ public class ReversibleSingleCellChangeCommand : SingleCellChangeCommand, IRever
     }
 }
 
-public class MultipleCellTransaction : IReversibleTransaction<IDungeon>
+public abstract class MultipleTransactionBase<TReceiver> : IReversibleTransaction<TReceiver>
 {
-    public MultipleCellTransaction Add(ReversibleSingleCellChangeCommand c)
+    public MultipleTransactionBase<TReceiver> Add(IReversibleTransaction<TReceiver> c)
     {
-        commands.Add(c.Coordinate, c);
+        commands.Add(c);
         return this;
     }
-    Dictionary<(int, int), ReversibleSingleCellChangeCommand> commands = [];
-    public void Execute(IDungeon d)
+    List<IReversibleTransaction<TReceiver>> commands = [];
+    public void Execute(TReceiver d)
     {
-        foreach (var c in commands.Values)
+        foreach (var c in commands)
         {
             c.Execute(d);
         }
     }
 
-    public bool IsInPostcondition(IDungeon context) =>
-        commands.Values.All(c => c.IsInPostcondition(context));
+    public bool IsInPostcondition(TReceiver context) =>
+        commands.All(c => c.IsInPostcondition(context));
 
-    public void Undo(IDungeon d)
+    public void Undo(TReceiver d)
     {
-        foreach (var c in commands.Values)
+        foreach (var c in commands)
         {
             c.Undo(d);
         }
     }
 
-    public void UndoExactly(IDungeon d)
+    public void UndoExactly(TReceiver d)
     {
         if (!IsInPostcondition(d))
             throw new IReversibleTransaction<IDungeon>.InexactUndoException();
 
-        foreach (var c in commands.Values)
+        foreach (var c in commands)
         {
             c.UndoExactly(d);
         }

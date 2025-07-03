@@ -137,7 +137,7 @@ namespace Donjon
 
                     int sill_door_r = sill.door_r;
                     int sill_door_c = sill.door_c;
-                    var door_cell = dungeon.cell[sill_door_r, sill_door_c];
+                    //~~ var door_cell = dungeon.cell[sill_door_r, sill_door_c];
                     //        redo if ($door_cell & $DOORSPACE);
                     //! `redo` is a perl notion that C# cannot replicate: If the condition inside the if statement is true, 
                     //! the loop restarts from the beginning, AFTER the increment is applied
@@ -177,7 +177,7 @@ namespace Donjon
 
                         try
                         {
-                            (char? sign, string key, string type) doorinfo = lookup_doorinfo(door_type);
+                            (char? sign, string key, string type) doorinfo = Lookup_doorinfo(door_type);
 
                             logger.LogTrace("working on door {d} at ({r},{c})", doorinfo, sill_door_r, sill_door_c);
                             dungeon.cell[sill_door_r, sill_door_c] |= door_type;
@@ -432,7 +432,7 @@ namespace Donjon
         /// <param name="door_type"></param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException">if non-doorspace or if undefined doorinfo</exception>
-        (char? sign, string key, string type) lookup_doorinfo(Cellbits door_type)
+        public static (char? sign, string key, string type) Lookup_doorinfo(Cellbits door_type)
         {
             if (!door_type.HasAnyFlag(Cellbits.DOORSPACE))
                 throw new InvalidOperationException($"SWW: Not in Doorspace: {door_type}");
@@ -515,22 +515,91 @@ namespace Donjon
     }
     namespace Rooms.Commands
     {
-        class OpenDoorCommand //: IReversibleTransaction<IDungeon>
+        class OpenDoorCommand : MultipleTransactionBase<IDungeon>
         {
             required public int SillIndex { get; init; }
             required public Cellbits DoorType { get; init; }
             // ... other state
 
-            public OpenDoorCommand(Random rng, List<Sill> sills)
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <see cref="DungeonGenRefactored.open_room(Dungeon, IDungeonRoom)"/>
+            /// <param name="rng"></param>
+            /// <param name="sills"></param>
+            /// <param name="dun"></param>
+            public OpenDoorCommand(Random rng,
+             List<Sill> sills, IDungeon dun)
             {
                 SillIndex = rng.Next(sills.Count);
                 DoorType = GetDoorType(rng);
                 // ... store other random choices
+
+                Sill sill = sills.ElementAt(SillIndex);
+
+                foreach (var c in Enumerable.Range(0, 4).Select(x => (
+                    sill.sill_r + (DungeonGenRefactored.di[sill.dir] * x)
+                    , sill.sill_c + (DungeonGenRefactored.dj[sill.dir] * x)
+                    )))
+                {
+                    var storeme = new ReversibleSingleCellChangeCommand(
+                      c.Item1, c.Item2,
+                      dun.cell[c.Item1, c.Item2],
+                      Cellbits.ENTRANCE | dun.cell[c.Item1, c.Item2] & ~Cellbits.PERIMETER);
+                    this.Add(storeme);
+                }
+
+
+                (char? sign, string key, string type) = DungeonGenRefactored.Lookup_doorinfo(DoorType);
+                var storemeToo = new ReversibleSingleCellChangeCommand(
+                    sill.door_r, sill.door_c,
+                    dun.cell[sill.door_r, sill.door_c],
+                        (this.DoorType | dun.cell[sill.door_r, sill.door_c]).SetLabel(sign ?? (char)0));
+                this.Add(storemeToo);
+                var door = new DoorData
+                {
+                    row = sill.door_r,
+                    col = sill.door_c,
+                    open_dir = sill.dir,
+                    key = key,
+                    type = type,
+                    out_id = sill.out_id
+                };
+                this.Add(default!);
             }
 
-            private Cellbits GetDoorType(Random rng)
+            /// <summary> random door type </summary>
+            /// <remarks><code>
+            /// sub door_type {
+            ///   my $i = int(rand(110));
+            /// 
+            ///   if ($i < 15) {
+            ///     return $ARCH;
+            ///   } elsif ($i < 60) {
+            ///     return $DOOR;
+            ///   } elsif ($i < 75) {
+            ///     return $LOCKED;
+            ///   } elsif ($i < 90) {
+            ///     return $TRAPPED;
+            ///   } elsif ($i < 100) {
+            ///     return $SECRET;
+            ///   } else {
+            ///     return $PORTC;
+            ///   }
+            /// }
+            /// <code></remarks>
+            private static Cellbits GetDoorType(Random rng)
             {
-                throw new NotImplementedException();
+                return rng.Next(110) switch
+                {
+                    >= 00 and < 15 => Cellbits.DOOR_ARCH,
+                    >= 15 and < 60 => Cellbits.DOOR_SIMPLE,
+                    >= 60 and < 75 => Cellbits.DOOR_LOCKED,
+                    >= 75 and < 90 => Cellbits.DOOR_TRAPPED,
+                    >= 90 and < 100 => Cellbits.DOOR_SECRET,
+                    _ => Cellbits.DOOR_PORTC
+                };
+
             }
 
             public static bool TryCreate(Random rng, IEnumerable<Sill> sills, out OpenDoorCommand? cmd)
@@ -542,8 +611,7 @@ namespace Donjon
             // Execute/Undo use SillIndex and DoorType, not new randoms
             // Effects:
             // - 4x in sill-open directions: strips Perimeter, or's Entrance
-            // - or's the doortype flag into the cell bits
-            // - sets the label bits to the doortype's sign
+            // - or's the doortype flag into the cell bits and sets the label bits to the doortype's sign
             // - ADDS a DoorData to the room's reflist for the appropriate edge
             //    UNLESS
         }
