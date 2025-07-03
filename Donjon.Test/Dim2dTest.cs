@@ -6,6 +6,10 @@ using SixLabors.ImageSharp;
 
 using Xunit.Abstractions;
 namespace Donjon.Test;
+/// <summary>
+/// 
+/// </summary>
+/// <param name="output"></param>
 public class Dim2dTest(ITestOutputHelper output) : Utilities.HostedTestBase<Dim2dTest>(output)
 {
     public static IEnumerable<object[]> RectCells { get; } = [
@@ -17,10 +21,15 @@ public class Dim2dTest(ITestOutputHelper output) : Utilities.HostedTestBase<Dim2
         // [new Rectangle(), new (int,int)[]{ (1, 2) }],
         ];
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="r"></param>
+    /// <param name="expected"></param>
     [Theory, MemberData(nameof(RectCells))]
     public void RectangleEnumeration(Rectangle r, IEnumerable<(int r, int c)> expected)
     {
-        Logger.LogInformation("re {v}", new{r.X,r.Y,r.Height,r.Width,r.Top,r.Left,r.Bottom,r.Right});
+        Logger.LogInformation("re {v}", new { r.X, r.Y, r.Height, r.Width, r.Top, r.Left, r.Bottom, r.Right });
         // Given
         (int r, int c)[] actual = [.. Dim2d.RangeInclusive(r).OrderBy(a => a.c).OrderBy(a => a.r)];
         Assert.Equal(expected.Count(), actual.Length);
@@ -31,6 +40,17 @@ public class Dim2dTest(ITestOutputHelper output) : Utilities.HostedTestBase<Dim2
         Logger.LogInformation("ac {v}", string.Join(",", actual));
         Assert.Equal(string.Join(",", exOrdered), string.Join(",", actual));
         Assert.Equal(exOrdered, actual);
+    }
+
+    [Fact]
+    public void RasterEnumeration()
+    {
+        Assert.Equal(
+            actual: new RasterEnumerator(1, 1, rowMajor: true, inclusive: true),
+            expected: [(0, 0), (0, 1), (1, 0), (1, 1)]);
+        Assert.Equal(
+            actual: new RasterEnumerator(1, 1, rowMajor: false, inclusive: true),
+            expected: [(0, 0), (1, 0), (0, 1), (1, 1)]);
     }
 
 }

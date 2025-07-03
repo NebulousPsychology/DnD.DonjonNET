@@ -67,8 +67,7 @@ public class DataField<T>(int height, int width)// needs to be record or class f
     }
 
     public static IEnumerable<(int r, int c)> Raster(int height, int width)
-        => Enumerable.Range(0, height).SelectMany(r => Enumerable
-            .Range(0, width).Select(c => (r, c)));
+        => new RasterEnumerator(height,width,rowMajor:true);
 
 }
 
