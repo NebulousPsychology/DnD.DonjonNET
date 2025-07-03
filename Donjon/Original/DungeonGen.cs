@@ -877,55 +877,56 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     {
         using (logger.BeginScope(nameof(set_room)))
         {
+            var roomBase = dungeon.room_base;//? even, if room_minmax are obligate odd
+            var roomRadix = dungeon.room_radix; //? odd, if room_minmax are obligate odd
+            int createRadix(int hemicelladdress, int hemicellmax)
+                => Math.Min(roomRadix, Math.Max(0, hemicellmax - roomBase - hemicelladdress));
+#if Original
             Dictionary<string, int> proto = prototuple is null ? [] : new()
             {
                 ["i"] = prototuple.Value.i,
                 ["j"] = prototuple.Value.j,
             };
-            var roomBase = dungeon.room_base;
-            var roomRadix = dungeon.room_radix;
 
             //::   unless (defined $proto->{'height'}) {
             if (!proto.ContainsKey("height"))
             {
-                if (proto.ContainsKey("i"))
-                {
-                    int a = Math.Max(0, dungeon.n_i - roomBase - proto["i"]);
-                    int r = a < roomRadix ? a : roomRadix;
-
-                    proto.Add("height", dungeon.random.Next(r) + roomBase);
-                }
-                else
-                {
-                    proto.Add("height", dungeon.random.Next(roomRadix) + roomBase);
-                }
-                //? var rdx = proto.ContainsKey("i") ? Math.Min(roomRadix, Math.Max(0, dungeon.n_i - roomBase - (int)proto["i"])) : roomRadix;
-                //? proto.Add("height", dungeon.random.Next(rdx) + roomBase);
+                var rdx = prototuple.HasValue ? fromprototup(prototuple.Value.i, dungeon.n_i) : roomRadix;
+                proto.Add("height", dungeon.random.Next(rdx) + roomBase);
             }
             //::   unless (defined $proto->{'width'}) {
             if (!proto.ContainsKey("width"))
             {
-                if (proto.ContainsKey("j"))
-                {
-                    int a = Math.Max(0, dungeon.n_j - roomBase - proto["j"]);
-                    int r = Math.Min(a, roomRadix);
-                    proto.Add("width", dungeon.random.Next(r) + roomBase);
-                }
-                else
-                {
-                    proto.Add("width", dungeon.random.Next(roomRadix) + roomBase);
-                }
+                var radx = prototuple.HasValue ? fromprototup(prototuple.Value.j, dungeon.n_j) : roomRadix;
+                proto.Add("width", dungeon.random.Next(radx) + roomBase);
             }
-
-            //   unless (defined $proto->{'i'}) {
-            //     $proto->{'i'} = int(rand($dungeon->{'n_i'} - $proto->{'height'}));
-            //   }
+            //::   unless (defined $proto->{'i'}) {
+            //::     $proto->{'i'} = int(rand($dungeon->{'n_i'} - $proto->{'height'}));
+            //::   }
             _ = proto.TryAdd("i", dungeon.random.Next(dungeon.n_i - proto["height"]));
-            //   unless (defined $proto->{'j'}) {
-            //     $proto->{'j'} = int(rand($dungeon->{'n_j'} - $proto->{'width'}));
-            //   }
+            //::   unless (defined $proto->{'j'}) {
+            //::     $proto->{'j'} = int(rand($dungeon->{'n_j'} - $proto->{'width'}));
+            //::   }
             _ = proto.TryAdd("j", dungeon.random.Next(dungeon.n_j - proto["width"]));
             return proto;
+#else
+            Dictionary<string, int> proto = prototuple is null ? new()
+            {
+                ["height"] = dungeon.random.Next(roomRadix) + roomBase,
+                ["width"] = dungeon.random.Next(roomRadix) + roomBase,
+            } : new()
+            {
+                ["i"] = prototuple.Value.i,
+                ["j"] = prototuple.Value.j,
+                ["height"] = dungeon.random.Next(createRadix(prototuple.Value.i, dungeon.n_i)) + roomBase,
+                ["width"] = dungeon.random.Next(createRadix(prototuple.Value.j, dungeon.n_j)) + roomBase,
+            };
+
+            //__ find a hemispace coordinate that can fit a room of the chosen size
+            _ = proto.TryAdd("i", dungeon.random.Next(dungeon.n_i - proto["height"]));
+            _ = proto.TryAdd("j", dungeon.random.Next(dungeon.n_j - proto["width"]));
+            return proto;
+#endif
         }
     }
 
@@ -2315,7 +2316,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     public string DescribeDungeon(Dungeon d, int size = 3)
         => DescribeDungeon(d, (cel, r, c) => string.Format($"[{{0,{size}}}]", cel.Summarize()));
 
-    public string DescribeDungeonLite(Dungeon dungeon) => DescribeDungeon(dungeon,
+    public string DescribeDungeonLite(IDungeon dungeon) => dungeon is Dungeon d ? DescribeDungeon(d,
         cellFormatter: (cel, r, c) => cel switch
         {
             Cellbits d when d.HasAnyFlag(Cellbits.DOORSPACE)
@@ -2330,7 +2331,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
             Cellbits d when d.HasAnyFlag(Cellbits.PERIMETER) => "#",//"⨂",
             Cellbits d when d == Cellbits.NOTHING => " ",
             _ => "?"
-        }, preamble: true);
+        }, preamble: true) : throw new ArgumentException("not a Dungeon");
 
     public string IndicatePosition(Dungeon d, int i, int j)
         => DescribeDungeon(d, (cel, r, c) => r == i && c == j ? "X" : "•", preamble: false);

@@ -1,8 +1,7 @@
 // Adapted from https://donjon.bin.sh/code/dungeon/dungeon.pl
 // https://creativecommons.org/licenses/by-nc/3.0/
 
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
+using Donjon.Original;
 
 using Donjon.Original;
 

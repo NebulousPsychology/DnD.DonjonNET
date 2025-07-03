@@ -3,9 +3,16 @@
 namespace Donjon.Original;
 #pragma warning disable IDE1006 // Naming Styles
 
-public record Dungeon : Opts
+public record Dungeon : Opts, IDungeon
 {
     #region IDungeonRoomIssuer
+    public bool TryIssueRoom(out int id)
+    {
+        last_room_id = n_rooms;
+        id = ++n_rooms;
+        return true;
+    }
+
     /// <summary>number of room_ids issued (and the source counter for issuing them)  </summary>
     public int n_rooms { get; set; } = 0; //? should this be a member of opts?
 
@@ -43,7 +50,7 @@ public record Dungeon : Opts
     public Lazy<Random> _random { get; private set; }
     public Random random => _random.Value;
     public Dictionary<string, int>? connect { get; private set; } = [];
-    public Dictionary<object, IDungeonRoom> room { get; private set; } = [];
+    public Dictionary<int, IDungeonRoom> room { get; private set; } = [];
     public List<DoorData> door { get; private set; } = [];
     public List<StairEnd?> stair { get; private set; } = [];
     #endregion IDungeon
