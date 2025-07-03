@@ -5,6 +5,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 using Xunit.Abstractions;
+namespace Donjon.Test.Utilities;
 
 /// <summary>
 /// Logs to both testoutput and Debug
@@ -12,7 +13,7 @@ using Xunit.Abstractions;
 /// supports loglevel overrides by pushing loglevel as a scope
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public class XunitLogger<T>(ITestOutputHelper output, LogLevel min = LogLevel.Information) : ILogger<T>
+public class XunitLogger<T>(ITestOutputHelper output, string? category = null, LogLevel min = LogLevel.Information) : ILogger<T>
 {
     readonly ConcurrentStack<object> _scopes = [];
     struct Ephemeral(XunitLogger<T> issuer) : IDisposable
@@ -35,7 +36,7 @@ public class XunitLogger<T>(ITestOutputHelper output, LogLevel min = LogLevel.In
     }
 
     public bool IsEnabled(LogLevel logLevel) => // logLevel >= min ||
-        // (logLevel >= ((_scopes.FirstOrDefault(s => s is LogLevel) as LogLevel?) ?? min))
+                                                // (logLevel >= ((_scopes.FirstOrDefault(s => s is LogLevel) as LogLevel?) ?? min))
         (logLevel >= (LogLevel)Math.Min((int)min, (int)((_scopes.FirstOrDefault(s => s is LogLevel) as LogLevel?) ?? min)))
         || (logLevel >= LogLevel.Debug && Debugger.IsAttached);
 
