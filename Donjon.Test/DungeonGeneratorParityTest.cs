@@ -35,9 +35,9 @@ public class DungeonGeneratorParityTest(ITestOutputHelper output) : Utilities.Ho
     [Theory]
     [InlineData("a", 3)]
     [InlineData("b", 4)]
-    public void Test1(string name, int seed)
+    public void RefactoredGenerationParity(string name, int seed)
     {
-        using (Logger.BeginScope(nameof(Test1)))
+        using (Logger.BeginScope(nameof(RefactoredGenerationParity)))
         {
             settings.Value.Returns(S(seed));
 
@@ -46,17 +46,17 @@ public class DungeonGeneratorParityTest(ITestOutputHelper output) : Utilities.Ho
             var d0 = Settings.CreateLegacy(s.Value);
             Logger.LogInformation("{name} :: got dungeon: {s}", name, d0.ToJson(true));
             // Given
-            var g0 = TestHost.Services.GetRequiredService<Original.DungeonGen>();
-            var g1 = TestHost.Services.GetRequiredService<DungeonGenRefactored>();
+            var originalGen = TestHost.Services.GetRequiredService<Original.DungeonGen>();
+            var refactorGen = TestHost.Services.GetRequiredService<DungeonGenRefactored>();
 
             // When
-            Original.Dungeon dungeon0 = g0.Create_dungeon(Settings.CreateLegacy(s.Value));
-            IDungeon dungeon1 = g1.Create_dungeon(Settings.CreateLegacy(s.Value));
+            Original.Dungeon dungeon0 = originalGen.Create_dungeon(Settings.CreateLegacy(s.Value));
+            IDungeon dungeon1 = refactorGen.Create_dungeon(Settings.CreateLegacy(s.Value));
             Logger.LogInformation("COMPARISON");
             using (Logger.BeginScope("Conclusion"))
             {
-                Logger.LogInformation("before: {d0}", g0.DescribeDungeonLite(dungeon0));
-                Logger.LogInformation(" after: {d0}", g1.DescribeDungeonLite(dungeon1));
+                Logger.LogInformation("before: {d0}", originalGen.DescribeDungeonLite(dungeon0));
+                Logger.LogInformation(" after: {d0}", refactorGen.DescribeDungeonLite(dungeon1));
             }
 
             // Then

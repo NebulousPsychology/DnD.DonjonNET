@@ -1,11 +1,12 @@
+#define USE_COMMAND_PATTERN
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 using Donjon.Original;
 using Donjon.Rooms.Commands;
 
 using Microsoft.Extensions.Logging;
-
 namespace Donjon
 {
     public partial class DungeonGenRefactored
@@ -128,15 +129,21 @@ namespace Donjon
                     //     my $sill = splice(@list,int(rand(@list)),1);
                     //        last unless ($sill);
                     if (!sills_list.Any()) break;
+#if false && USE_COMMAND_PATTERN
                     if (OpenDoorCommand.TryCreate(dungeon.random, sills_list, out var doorCmd))
                     {
                         // ... add to registry (manydoors cmd?)
+                        doorCmd.Execute(dungeon);
                     }
+#else
                     #region OpenDoorCmd (sill,dungeon,room)
-                    Sill sill = sills_list.ElementAt(dungeon.random.Next(sills_list.Count()));
+                    var SillIndex = dungeon.random.Next(sills_list.Count());
+                    Sill sill = sills_list.ElementAt(SillIndex);
+                    //~~ Sill sill = sills_list.ElementAt(dungeon.random.Next(sills_list.Count()));
 
-                    int sill_door_r = sill.door_r;
-                    int sill_door_c = sill.door_c;
+
+                    //~~ int sill_door_r = sill.door_r;
+                    //~~ int sill_door_c = sill.door_c;
                     //~~ var door_cell = dungeon.cell[sill_door_r, sill_door_c];
                     //        redo if ($door_cell & $DOORSPACE);
                     //! `redo` is a perl notion that C# cannot replicate: If the condition inside the if statement is true, 
@@ -157,9 +164,9 @@ namespace Donjon
                         case SillHelper.SillActionKind.CONTINUE: break;
                     }
                     ;
-                    var open_r = sill.sill_r;
-                    var open_c = sill.sill_c;
-                    Cardinal open_dir = sill.dir;
+                    //~~ var open_r = sill.sill_r;
+                    //~~ var open_c = sill.sill_c;
+                    //~~ Cardinal open_dir = sill.dir;
 
                     /// # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                     //     # open door
@@ -167,42 +174,45 @@ namespace Donjon
                     {
                         for (int x = 0; x < 3; x++)// len 4
                         {
-                            int r = open_r + (di[open_dir] * x);
-                            int c = open_c + (dj[open_dir] * x);
+                            int r = sill.sill_r + (di[sill.dir] * x);
+                            int c = sill.sill_c + (dj[sill.dir] * x);
 
                             dungeon.cell[r, c] &= ~Cellbits.PERIMETER;
                             dungeon.cell[r, c] |= Cellbits.ENTRANCE;
                         }
-                        Cellbits door_type = getdoor_type(dungeon.random);
+
+                        var door_type = OpenDoorCommand.GetDoorType(dungeon.random);
+                        // Cellbits door_type = getdoor_type(dungeon.random);
 
                         try
                         {
                             (char? sign, string key, string type) doorinfo = Lookup_doorinfo(door_type);
 
-                            logger.LogTrace("working on door {d} at ({r},{c})", doorinfo, sill_door_r, sill_door_c);
-                            dungeon.cell[sill_door_r, sill_door_c] |= door_type;
-                            dungeon.cell[sill_door_r, sill_door_c].SetLabel(doorinfo.sign ?? (char)0);
+                            logger.LogTrace("working on door {d} at ({r},{c})", doorinfo, sill.door_r, sill.door_c);
+                            dungeon.cell[sill.door_r, sill.door_c] |= door_type;
+                            dungeon.cell[sill.door_r, sill.door_c].SetLabel(doorinfo.sign ?? (char)0);
                             var door = new DoorData
                             {
-                                row = sill_door_r,
-                                col = sill_door_c,
-                                open_dir = open_dir,
+                                row = sill.door_r,
+                                col = sill.door_c,
+                                open_dir = sill.dir,
                                 key = doorinfo.key,
                                 type = doorinfo.type,
                                 out_id = sill.out_id
                             };
 
                             //     push(@{ $room->{'door'}{$open_dir} },$door) if ($door); 
-                            if (!room.door.TryAdd(open_dir, [door])) room.door[open_dir].Add(door);
-                            logger.LogInformation("Add door {d} at ({r},{c})", doorinfo, sill_door_r, sill_door_c);
+                            if (!room.door.TryAdd(door.open_dir, [door])) room.door[door.open_dir].Add(door);
+                            logger.LogInformation("Add door {d} at ({r},{c})", doorinfo, sill.door_r, sill.door_c);
                         }
-                        catch (InvalidOperationException _)
+                        catch (InvalidOperationException)
                         {
-                            logger.LogTrace("rejected door at ({r},{c})", sill_door_r, sill_door_c);
+                            logger.LogTrace("rejected door at ({r},{c})", sill.door_r, sill.door_c);
                         }
 
                     }// /scope Opendoor
-                    #endregion OpenDoorCmd  
+                    #endregion OpenDoorCmd
+#endif
                 }
                 #endregion OpenManyDoorsCommand
                 logger.LogInformation("Opened {actual} doors for {expected} attempts", room.door.Sum(directionkvp => directionkvp.Value.Count), n_opens);
@@ -536,7 +546,6 @@ namespace Donjon
                 // ... store other random choices
 
                 Sill sill = sills.ElementAt(SillIndex);
-
                 foreach (var c in Enumerable.Range(0, 4).Select(x => (
                     sill.sill_r + (DungeonGenRefactored.di[sill.dir] * x)
                     , sill.sill_c + (DungeonGenRefactored.dj[sill.dir] * x)
@@ -588,7 +597,7 @@ namespace Donjon
             ///   }
             /// }
             /// <code></remarks>
-            private static Cellbits GetDoorType(Random rng)
+            internal static Cellbits GetDoorType(Random rng)
             {
                 return rng.Next(110) switch
                 {
@@ -602,9 +611,9 @@ namespace Donjon
 
             }
 
-            public static bool TryCreate(Random rng, IEnumerable<Sill> sills, out OpenDoorCommand? cmd)
+            public static bool TryCreate(Random rng, IEnumerable<Sill> sills, [MaybeNullWhen(false)] out OpenDoorCommand cmd)
             {
-                cmd = null;
+                cmd = null!;
                 return false;
             }
 
