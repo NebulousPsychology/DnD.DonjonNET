@@ -7,10 +7,10 @@ public record Dungeon : Opts
 {
     #region IDungeonRoomIssuer
     /// <summary>number of room_ids issued (and the source counter for issuing them)  </summary>
-    public int n_rooms = 0; //? should this be a member of opts?
+    public int n_rooms { get; set; } = 0; //? should this be a member of opts?
 
     /// <summary>last room_id issued</summary>
-    public int? last_room_id;
+    public int? last_room_id { get; set; } = null;
     #endregion IDungeonRoomIssuer
 
     #region IDungeonDimensional
@@ -38,6 +38,7 @@ public record Dungeon : Opts
 
     #region IDungeon
     private readonly Lazy<Cellbits[,]> _cellbits;
+    [System.Text.Json.Serialization.JsonIgnore]
     public Cellbits[,] cell => _cellbits.Value;
     public Lazy<Random> _random { get; private set; }
     public Random random => _random.Value;
