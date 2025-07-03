@@ -1,6 +1,7 @@
 namespace Donjon.Test;
 
 using Donjon.ImageTools;
+using Donjon.Original;
 using Donjon.Test.Utilities;
 
 using Microsoft.Extensions.Logging;
