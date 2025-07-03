@@ -2,7 +2,7 @@
 // https://creativecommons.org/licenses/by-nc/3.0/
 using System.Diagnostics;
 
-namespace Donjon;
+namespace Donjon.Original;
 #pragma warning disable IDE1006 // Naming Styles
 
 [DebuggerDisplay("{id}, ({north},{west})..({south},{east}), a={area}, {door.Count}door")]
@@ -19,6 +19,23 @@ public struct DungeonRoomStruct : IDungeonRoom
     public int height { get; init; }
     public int width { get; init; }
     public readonly int area => height * width;
+    public readonly bool Equals(IDungeonRoom? other)
+    {
+        return other is not null &&
+            other.id == id &&
+            other.north == north &&
+            other.south == south &&
+            other.east == east &&
+            other.west == west &&
+            other.row == row &&
+            other.col == col &&
+            other.height == height &&
+            other.width == width &&
+            other.area == area &&
+            other.Perimeter == (this as IDungeonRoom).Perimeter &&
+            other.id == id &&
+            true;
+    }
 }
 
 #pragma warning restore IDE1006 // Naming Styles
