@@ -16,6 +16,11 @@ public static class CellbitsExtensions
         return false;
     }
 
+    public static void TrySetRoomId(this ref Cellbits cell, int id)
+    {
+        cell |= Cellbits.ROOM | (Cellbits)((id << 6) & (int)Cellbits.ROOM_ID);
+    }
+
     /// <summary>   </summary>
     public static bool TryGetLabel(this Cellbits cell, out byte label)
     {
@@ -27,7 +32,17 @@ public static class CellbitsExtensions
         label = 0;
         return false;
     }
+    /// <summary>
+    /// Bitwise-Or's a char into the top 8 bits of the UInt32
+    /// FIXME: `char` is UTF16; a 2-byte size
+    /// </summary>
+    /// <param name="cell"></param>
+    /// <param name="c"></param>
+    /// <returns></returns>
     public static Cellbits SetLabel(this Cellbits cell, char c) => cell | (Cellbits)(c << 24);
+
+    /// <summary>determine if any of the bits set in mask are set</summary>
+    /// <returns>true if any of the bits set in mask are set in the current instance; otherwise false</returns>
     public static bool HasAnyFlag(this Cellbits cell, Cellbits mask) => (cell & mask) != 0;
     public static string Summarize(this Cellbits cell, bool emoji = false)
     {
@@ -54,4 +69,6 @@ public static class CellbitsExtensions
         ];
         return string.Concat(tokens);
     }
+
+    public static Cellbits At(this Cellbits[,] self, (int, int) coord) => self[coord.Item1, coord.Item2];
 }
