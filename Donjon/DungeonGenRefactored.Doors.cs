@@ -544,8 +544,8 @@ namespace Donjon
                 {
                     var storeme = new ReversibleSingleCellChangeCommand(
                       c.Item1, c.Item2,
-                      dun.cell[c.Item1, c.Item2],
-                      Cellbits.ENTRANCE | dun.cell[c.Item1, c.Item2] & ~Cellbits.PERIMETER);
+                      dun.cell.At(c),
+                      Cellbits.ENTRANCE | dun.cell.At(c) & ~Cellbits.PERIMETER);
                     this.Add(storeme);
                 }
 

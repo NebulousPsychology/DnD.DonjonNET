@@ -70,4 +70,9 @@ public static class CellbitsExtensions
         ];
         return string.Concat(tokens);
     }
+
+    [Obsolete(nameof(DataField<>))]
+    public static Cellbits At(this Cellbits[,] self, (int, int) coord) => self[coord.Item1, coord.Item2];
+    [Obsolete(nameof(DataField<>))]
+    public static Cellbits Get(this Cellbits[,] self, SixLabors.ImageSharp.Point coord) => self[coord.Row(), coord.Col()];
 }
