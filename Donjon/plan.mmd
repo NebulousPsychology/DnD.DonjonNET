@@ -1,0 +1,67 @@
+classDiagram
+    namespace Original {
+        class Dungeon {
+            +Cellbits[,] cell
+        }
+        class DungeonGen
+    }
+    class IDungeonGenerator{
+        <<interface>> 
+        +create() IDungeon
+    } 
+
+    class DungeonGenRefactored
+    IDungeonGenerator <|-- DungeonGenRefactored
+
+    class OriginalGeneratorAdapter{
+        +DungeonGen generator
+    }
+    IDungeonGenerator <|-- OriginalGeneratorAdapter
+    OriginalGeneratorAdapter *-- DungeonGen : generator
+
+    DungeonGenRefactored..DungeonGen
+
+    IDungeonRoomIssuer~TRoomId~ <|-- RoomIdIssuer : impl
+    class IDungeonRoomIssuer~TRoomId~{
+        <<interface>>
+        +TRoomId n_rooms *
+        +TRoomId? last_room_id *
+        +TryIssueRoom(out TRoomId id) bool *
+    }
+    class IDungeonDimensional{
+        <<interface>>
+        +int n_i *
+        +int n_j *
+        +int max_row *
+        +int max_col *
+    }
+
+    IDungeonDimensional ()-- IDungeon
+    IDungeonRoomIssuer~TRoomId~ <|-- IDungeon :impl
+    class IDungeon{
+        <<interface>>
+        +Cellbits[,] cell *
+        +Dictionary~string, int~? connect *
+        +Dictionary~TRoomId, IDungeonRoom~ room *
+        +List~DoorData~ door *
+        +List~StairEnd?~ stair *
+
+        +Get(Point) CellBits
+        +Get((r,c)) CellBits
+        +Get(int r, int c) CellBits *
+        +Set(CellBits, Point)
+        +Set(CellBits, (r,c))
+        +Set(CellBits, int r, int c) *
+        +AsEnumerable() Enumerable~CellBits~ *
+    }
+    class OriginalDungeonAdapter{
+
+    }
+    OriginalDungeonAdapter *-- Dungeon
+
+    IDungeon <|-- OriginalDungeonAdapter
+    IDungeon <|-- DungeonData
+    class DungeonData{
+        #DataField~CellBits~ Data
+    }
+    
