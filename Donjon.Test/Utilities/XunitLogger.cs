@@ -57,7 +57,8 @@ public class XunitLogger<T>(ITestOutputHelper output, string? category = null, L
                 .Concat(overrideless.Skip(ellipsisTail).TakeLast(ellipsisPrefix))
             : overrideless
             ).Reverse());
-        string text = string.Format("[{0}] >> [{1}] {2}", scopetxt, eventId, formatter(state, exception));
+        string text = string.Format("[{0}] >> [{1}] #{2}\n           {3}", scopetxt, category, eventId,
+            formatter(state, exception));
         Debug.WriteLine(message: text, category: logLevel.ToString());
         output.WriteLine("{0,11}: {1}", logLevel.ToString(), text);
     }

@@ -16,11 +16,22 @@ public interface IDungeon : IDungeonDimensional, IDungeonRoomIssuer
 
 public class DungeonEqualityComparer : IEqualityComparer<IDungeon>
 {
+    public static DungeonEqualityComparer Instance { get; } = new();
+    static bool EqualRooms(Dictionary<TRoomId, IDungeonRoom> x, Dictionary<TRoomId, IDungeonRoom> y)
+    {
+        return x.Keys.Union(y.Keys)
+            .All(key => x.TryGetValue(key, out var value)
+                && y.TryGetValue(key, out var value2)
+                && value.Equals(value2));
+    }
+
     public bool Equals(IDungeon? x, IDungeon? y)
     {
         if (x is null || y is null) return false;
         if (false == (x.connect ?? []).SequenceEqual(y.connect ?? [])) return false;
-        if (false == (x.room ?? []).SequenceEqual(y.room ?? [])) return false;
+        // if (false == (x.room?.OrderBy(k => k.Key).ToList() ?? [])
+        //     .SequenceEqual(y.room?.OrderBy(k => k.Key).ToList() ?? [])) return false;
+        if (EqualRooms(x.room, y.room) is false) return false;
         if (false == (x.door ?? []).SequenceEqual(y.door ?? [])) return false;
         if (false == (x.stair ?? []).SequenceEqual(y.stair ?? [])) return false;
         if (x.cell is null || y.cell is null) return false;
