@@ -5,13 +5,13 @@ using Microsoft.Extensions.Options;
 
 namespace Donjon;
 
-interface IDungeonGenerator //: IDungeonDescriber
+public interface IDungeonGenerator //: IDungeonDescriber
 {
     public IDungeon Create_dungeon();
     protected IDungeonRoomIssuer RoomIssuer { get; }
 }
 
-interface IDungeonDescriber<TOutput>
+public interface IDungeonDescriber<TOutput>
 {
     public TOutput DescribeDungeonLite(IDungeon dungeon);
 }
@@ -26,7 +26,7 @@ interface IRoomPlacement
 /// </summary>
 /// <param name="settings"></param>
 /// <param name="loggerFactory"></param>
-class OriginalGeneratorAdapter(IOptions<Settings> settings, ILoggerFactory loggerFactory)
+public class OriginalGeneratorAdapter(IOptions<Settings> settings, ILoggerFactory loggerFactory)
     : IDungeonGenerator
 {
     private ILogger<OriginalGeneratorAdapter> Logger { get; }
@@ -61,7 +61,7 @@ class OriginalGeneratorAdapter(IOptions<Settings> settings, ILoggerFactory logge
         return d;
     }
 
-    class OriginalDungeonAdapter(Original.Dungeon data) : IDungeon
+    public class OriginalDungeonAdapter(Original.Dungeon data) : IDungeon
     {
         public Original.Dungeon Data { get; } = data;
 
