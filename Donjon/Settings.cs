@@ -13,7 +13,7 @@ public class Settings
 
 }
 
-public class DungeonSettings
+public class DungeonSettings : IDungeonDimensional
 {
     /// <remarks>must be odd</remarks
     public int n_rows { get; init { ArgumentOutOfRangeException.ThrowIfZero(value % 2); field = value; } } = 39;
