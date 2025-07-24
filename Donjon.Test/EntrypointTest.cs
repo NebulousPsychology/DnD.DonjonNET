@@ -139,17 +139,28 @@ public class EntrypointTest(ITestOutputHelper outputHelper)
         RandomlyProbeDungeonSeeds();
     }
 
-    [Fact(Skip = "manual confirmation")]
+    [Fact]
     public void LogsToDebugAndResults()
     {
+        using (Logger.BeginScope(LogLevel.Trace))
         // Information[0]<HelloStringScope> info
         // Information[0]<{ hello = object, scope = 2 }>HelloStringScope> info2
         using (Logger.BeginScope("HelloStringScope"))
         {
             Logger.LogInformation("info");
             using (Logger.BeginScope(new { hello = "object", scope = 2 }))
+            using (Logger.BeginScope(new { hello = "object", scope = 3 }))
+            using (Logger.BeginScope(new { hello = "object", scope = 4 }))
+            using (Logger.BeginScope(new { hello = "object", scope = 5 }))
+            using (Logger.BeginScope(new { hello = "object", scope = 6 }))
+            using (Logger.BeginScope(new { hello = "object", scope = 7 }))
+            using (Logger.BeginScope(new { hello = "object", scope = 8 }))
+            using (Logger.BeginScope(new { hello = "object", scope = 9 }))
+            using (Logger.BeginScope(new { hello = "object", scope = 10 }))
             {
-                Logger.LogInformation("info2");
+                Logger.LogInformation("info2\ninfo3");
+                Logger.LogDebug("info2\ninfo3");
+                Logger.LogTrace("info2\ninfo3");
             }
         }
     }

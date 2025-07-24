@@ -64,4 +64,28 @@ classDiagram
     class DungeonData{
         #DataField~CellBits~ Data
     }
-    
+
+namespace Strategies {
+    class Context{
+        -IDungeonGenStrategy myStrategy
+        +Build() IDungeon
+    }
+    class IDungeonGenStrategy
+}
+
+namespace Pipeline {
+    class IPipelineStep~T~ {
+        <<interface>>
+        +Process(T) T
+    }
+    class DungeonCreationPipeline{
+        -List~IPipelineStep~ steps
+        +AddStep(IPipelineStep~T~ step) Self
+        +Execute(T input) T
+    }
+    class DoorsStage
+    class TunnelStage
+}
+   IPipelineStep~T~ <|-- DoorsStage
+   IPipelineStep~T~ <|-- TunnelStage
+DungeonCreationPipeline o-- IPipelineStep : steps

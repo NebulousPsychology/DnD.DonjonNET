@@ -1,5 +1,6 @@
 using Donjon.Original;
 namespace Donjon;
+
 public class DungeonWriter : IDungeonDescriber<string>
 {
     public void WriteDungeonGrid(TextWriter writer, IDungeon d, Func<Cellbits, int, int, string>? cellFormatter = null, string separator = " ")
@@ -20,9 +21,10 @@ public class DungeonWriter : IDungeonDescriber<string>
         };
 
         cellFormatter ??= Decode;
-
+        var maxCellWidth = new RasterEnumerator(d.max_row, d.max_col, inclusive: true)
+            .Max(rc => cellFormatter(d.cell[rc.r, rc.c], rc.r, rc.c).Length);
         var colIndices = Enumerable.Range(0, d.max_col + 1).Select(c => c % 10);
-        writer.WriteLine($"        {string.Join(separator, colIndices)}");
+        writer.WriteLine($"        {string.Join($"{new string(' ', maxCellWidth)}", colIndices)}");
         for (int r = 0; r < d.cell.GetLength(0); r++)
         {
             var line = Enumerable.Range(0, d.cell.GetLength(1)).Select(c => cellFormatter(d.cell[r, c], r, c));
@@ -34,16 +36,15 @@ public class DungeonWriter : IDungeonDescriber<string>
 
     private void WritePreamble(TextWriter b, IDungeon dungeon, Settings? s = null)
     {
-        if (s is not null)
+        if (dungeon is Original.Dungeon d)
         {
-            b.WriteLine($"seed:{s.seed} {s.Dungeon.n_rows}x{s.Dungeon.n_cols} csz={s.Map.cell_size} dun{s.Dungeon.dungeon_layout} cor{s.Corridors.corridor_layout}");
-            b.WriteLine($"nrooms:{dungeon.n_rooms} actual:{dungeon.room.Count} last='{dungeon.last_room_id?.ToString() ?? "nul"}' sz({s.Rooms.room_min}..{s.Rooms.room_max})");
+            b.WriteLine($"seed:{d.seed} {d.n_rows}x{d.n_cols} csz={d.cell_size} dun{d.dungeon_layout} cor{d.corridor_layout} sz({d.room_min}..{d.room_max})");
         }
-        else if (dungeon is Dungeon d)
+        else if (s is not null)
         {
-            b.WriteLine($"seed:{d.seed} {d.n_rows}x{d.n_cols} csz={d.cell_size} dun{d.dungeon_layout} cor{d.corridor_layout}");
-            b.WriteLine($"nrooms:{d.n_rooms} actual:{d.room.Count} last='{d.last_room_id?.ToString() ?? "nul"}' sz({d.room_min}..{d.room_max})");
+            b.WriteLine($"seed:{s.seed} {s.Dungeon.n_rows}x{s.Dungeon.n_cols} csz={s.Map.cell_size} dun{s.Dungeon.dungeon_layout} cor{s.Corridors.corridor_layout} sz({s.Rooms.room_min}..{s.Rooms.room_max})");
         }
+        b.WriteLine($"nrooms:{dungeon.n_rooms} actual:{dungeon.room.Count} last='{dungeon.last_room_id?.ToString() ?? "nul"}'");
         foreach (var item in dungeon.room)
         {
             b.Write($"    key'{item.Key}' [id{item.Value.id}] | ({item.Value.north},{item.Value.west})..({item.Value.south},{item.Value.east})");
@@ -68,7 +69,8 @@ public class DungeonWriter : IDungeonDescriber<string>
     {
         using var b = new StringWriter();
         WritePreamble(b, d);
-        WriteDungeonGrid(b, d, (cel, r, c) => string.Format($"[{{0,{size}}}]", cel.Summarize()));
+        // WriteDungeonGrid(b, d, (cel, r, c) => string.Format($"[{{0,{size}}}]", cel.Summarize()), separator: new string(' ', size+2));
+        WriteDungeonGrid(b, d, (cel, r, c) => string.Format($"[{{0,{size}}}]", cel.Summarize()), separator: " ");
         return b.ToString();
     }
 

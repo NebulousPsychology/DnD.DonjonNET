@@ -3,7 +3,6 @@ using Donjon.ImageTools;
 
 using SixLabors.ImageSharp;
 
-
 namespace Donjon;
 
 /// <summary>

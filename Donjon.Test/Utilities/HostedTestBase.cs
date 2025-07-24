@@ -1,5 +1,6 @@
 // #define USE_REFLECTED_MOCK_LOGGER
 namespace Donjon.Test.Utilities;
+
 using NSubstitute;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -70,14 +71,23 @@ public class HostedTestBase<T> // where T : class
                 );
 #else
         toh.CreateLogger(Arg.Any<string>())
-            .Returns(o => new XunitLogger<object>(XunitOutput, min: level, category: o.Arg<string>()));
+            .Returns(o => new XunitLogger<object>(
+                output: XunitOutput,
+                min: Filters
+                    .Where(kvp => kvp.Value.Contains(o.Arg<string>())) // note: does not match wildcards
+                    .OrderBy(kvp => kvp.Key)
+                    .Select(kvp => kvp.Key)
+                    .FirstOrDefault(defaultValue: level),
+                category: o.Arg<string>()));
 #endif
         return toh;
     }
 
     private void PerformLoggingConfig(ILoggingBuilder context, LogLevel level)
     {
-        context.ClearProviders().AddProvider(MockProvider(level));
+        context.ClearProviders()
+            .SetMinimumLevel(level)
+            .AddProvider(MockProvider(level));
         ApplyFilters(context);
     }
 

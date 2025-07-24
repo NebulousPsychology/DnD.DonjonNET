@@ -1,11 +1,13 @@
 using System.Text.Json;
 
+using Donjon.Original;
+
 namespace Donjon;
 #pragma warning disable IDE1006 // Naming Styles
 
 public class Settings
 {
-    public long seed { get; set; }
+    public int seed { get; set; }
     public required DungeonSettings Dungeon { get; init; }
     public required RoomSettings Rooms { get; init; }
     public required CorridorSettings Corridors { get; init; }
@@ -66,7 +68,9 @@ public class CorridorSettings
     /// <summary>Bent, Labyrinth, or Straight</summary>
     /// <see cref="DungeonGen.corridor_layout"/>
     /// <see cref="CorridorLayout"/>
-    public string corridor_layout = "Bent"; // or labyrinth, or straight
+    //~~ public string corridor_layout = "Bent"; // or labyrinth, or straight
+    public CorridorLayout corridor_layout = CorridorLayout.Bent; // or labyrinth, or straight
+
 
     /// <summary>percent of deadends to remove</summary>
     public double remove_deadends = 50;
