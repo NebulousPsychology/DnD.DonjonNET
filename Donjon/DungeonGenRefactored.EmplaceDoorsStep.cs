@@ -514,6 +514,9 @@ namespace Donjon
     }
     namespace Rooms.Commands
     {
+        // TODO develop commandpattern: OpenManyDoorsCommand? (n_opens,sills_list,dungeon, room )
+
+        // TODO develop commandpattern: OpenDoorCmd (sill,dungeon,room)
         class OpenDoorCommand : MultipleTransactionBase<IDungeon>
         {
             required public int SillIndex { get; init; }
@@ -611,5 +614,7 @@ namespace Donjon
             // - ADDS a DoorData to the room's reflist for the appropriate edge
             //    UNLESS
         }
+
+
     }
 }
