@@ -1,6 +1,7 @@
 // Adapted from https://donjon.bin.sh/code/dungeon/dungeon.pl
 // https://creativecommons.org/licenses/by-nc/3.0/
 using System.Collections.Immutable;
+using System.Numerics;
 using System.Text.Json;
 
 using Microsoft.Extensions.Logging;
@@ -363,7 +364,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $dungeon;
     /// }
     /// <remarks><code>
-    Dungeon init_cells(Dungeon dungeon)
+    protected Dungeon init_cells(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(init_cells)))
         {
@@ -404,7 +405,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $dungeon;
     /// }
     /// </code> </remarks>
-    Dungeon mask_cells(Dungeon dungeon, int[,] mask)
+    protected Dungeon mask_cells(Dungeon dungeon, int[,] mask)
     {
         using (logger.BeginScope(nameof(mask_cells)))
         {
@@ -444,7 +445,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $dungeon;
     /// }
     /// </code> </remarks>
-    Dungeon round_mask(Dungeon dungeon)
+    protected Dungeon round_mask(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(round_mask)))
         {
@@ -487,7 +488,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// }
     /// </code>
     /// </remarks>
-    Dungeon emplace_rooms(Dungeon dungeon)
+    protected Dungeon emplace_rooms(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(emplace_room)))
         {
@@ -524,7 +525,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $dungeon;
     /// }
     /// </code></remarks>
-    Dungeon pack_rooms(Dungeon dungeon)
+    protected Dungeon pack_rooms(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(pack_rooms)))
         {
@@ -565,7 +566,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $dungeon;
     /// }
     /// </code></remarks>
-    Dungeon scatter_rooms(Dungeon dungeon)
+    protected Dungeon scatter_rooms(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(scatter_rooms)))
         {
@@ -592,7 +593,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $n_rooms;
     /// }
     /// </code></remarks>
-    int alloc_rooms(Dungeon dungeon)
+    protected int alloc_rooms(Dungeon dungeon)
     {
         logger.LogTrace(nameof(alloc_rooms));
         int dungeon_area = dungeon.n_cols * dungeon.n_rows;
@@ -694,7 +695,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $dungeon;
     /// }
     /// </code></remarks>
-    Dungeon emplace_room(Dungeon dungeon, (int i, int j)? prototup)
+    protected Dungeon emplace_room(Dungeon dungeon, (int i, int j)? prototup)
     {
         using (logger.BeginScope($"{nameof(emplace_room)} {prototup?.ToString() ?? "(randomized)"}"))
         {
@@ -873,7 +874,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///     where i&j are either the original hemispace coords OR a random hemispace coord that can fit the room
     ///     FIXME: uncertainty remains on whether this directly maps to Rectangle types
     /// </returns>
-    IDictionary<string, int> set_room(Dungeon dungeon, (int i, int j)? prototuple)
+    protected IDictionary<string, int> set_room(Dungeon dungeon, (int i, int j)? prototuple)
     {
         using (logger.BeginScope(nameof(set_room)))
         {
@@ -949,7 +950,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $hit;
     /// }
     /// </code></remarks>
-    Dictionary<string, int> sound_room(Dungeon dungeon, int r1, int c1, int r2, int c2)
+    protected Dictionary<string, int> sound_room(Dungeon dungeon, int r1, int c1, int r2, int c2)
     {
         using (logger.BeginScope(nameof(sound_room)))
         {
@@ -1000,7 +1001,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// </code></remarks>
     /// <param name="dungeon"></param>
     /// <returns></returns>
-    Dungeon open_rooms(Dungeon dungeon)
+    protected Dungeon open_rooms(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(open_rooms)))
         {
@@ -1094,7 +1095,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="dungeon"></param>
     /// <param name="room"></param>
     /// <returns></returns>
-    Dungeon open_room(Dungeon dungeon, IDungeonRoom room)
+    protected Dungeon open_room(Dungeon dungeon, IDungeonRoom room)
     {
         using (logger.BeginScope(nameof(open_room)))
         {
@@ -1211,7 +1212,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// }
     /// </code></remarks>
     /// <returns>number of openings for the room</returns>
-    int alloc_opens(Dungeon dungeon, IDungeonRoom room)
+    protected int alloc_opens(Dungeon dungeon, IDungeonRoom room)
     {
         using (logger.BeginScope(nameof(alloc_opens)))
         {
@@ -1260,7 +1261,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="dungeon"></param>
     /// <param name="room"></param>
     /// <returns></returns>
-    IEnumerable<Sill> door_sills(Dungeon dungeon, IDungeonRoom room)
+    protected IEnumerable<Sill> door_sills(Dungeon dungeon, IDungeonRoom room)
     {
         using (logger.BeginScope(nameof(door_sills)))
         {
@@ -1340,7 +1341,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="sill_c"></param>
     /// <param name="dir"></param>
     /// <returns></returns>
-    Sill? check_sill(Cellbits[,] cell, IDungeonRoom room, int sill_r, int sill_c, Cardinal dir)
+    protected Sill? check_sill(Cellbits[,] cell, IDungeonRoom room, int sill_r, int sill_c, Cardinal dir)
     {
         using (logger.BeginScope(nameof(check_sill)))
         {
@@ -1396,7 +1397,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   }
     /// }
     /// <code></remarks>
-    Cellbits getdoor_type(Random r)
+    protected Cellbits getdoor_type(Random r)
     {
         using (logger.BeginScope(nameof(getdoor_type)))
         {
@@ -1439,7 +1440,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// </code></remarks>
     /// <param name="dungeon"></param>
     /// <returns></returns>
-    Dungeon label_rooms(Dungeon dungeon)
+    protected Dungeon label_rooms(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(label_rooms)))
         {
@@ -1487,7 +1488,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// </code> </remarks>
     /// <param name="dungeon"></param>
     /// <returns></returns>
-    Dungeon corridors(Dungeon dungeon)
+    protected Dungeon corridors(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(corridors)))
         {
@@ -1541,7 +1542,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="j">3+2n odd index space col</param>
     /// <param name="lastdir"></param>
     /// <returns></returns>
-    Dungeon tunnel(Dungeon dungeon, int i, int j, Cardinal? lastdir = null)
+    protected Dungeon tunnel(Dungeon dungeon, int i, int j, Cardinal? lastdir = null)
     {
         // using (logger.BeginScope(nameof(tunnel)))
         // {
@@ -1580,7 +1581,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="dungeon"></param>
     /// <param name="last_dir"></param>
     /// <returns>A shuffled series of directions to consider turning</returns>
-    IEnumerable<Cardinal> tunnel_dirs(Dungeon dungeon, Cardinal? last_dir)
+    protected IEnumerable<Cardinal> tunnel_dirs(Dungeon dungeon, Cardinal? last_dir)
     {
         using (logger.BeginScope(nameof(tunnel_dirs)))
         {
@@ -1628,7 +1629,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="j">oddcol indexspace</param>
     /// <param name="dir"></param>
     /// <returns>true if the <see cref="delve_tunnel"/> occurred</returns>
-    bool open_tunnel(Dungeon dungeon, int i, int j, Cardinal dir)
+    protected bool open_tunnel(Dungeon dungeon, int i, int j, Cardinal dir)
     {
         // using (logger.BeginScope(nameof(open_tunnel)))
         // {
@@ -1672,7 +1673,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="next_r"></param>
     /// <param name="next_c"></param>
     /// <returns>true if no cell in the proposed tunnel is Blocked/perimeter/corridor</returns>
-    bool sound_tunnel(Dungeon dungeon, int mid_r, int mid_c, int next_r, int next_c)
+    protected bool sound_tunnel(Dungeon dungeon, int mid_r, int mid_c, int next_r, int next_c)
     {
         using (logger.BeginScope(nameof(sound_tunnel)))
         {
@@ -1730,7 +1731,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="next_r"></param>
     /// <param name="next_c"></param>
     /// <returns>true, always</returns>
-    bool delve_tunnel(Dungeon dungeon, int this_r, int this_c, int next_r, int next_c)
+    protected bool delve_tunnel(Dungeon dungeon, int this_r, int this_c, int next_r, int next_c)
     {
         using (logger.BeginScope("{fn}: delve from ({r},{c}) to ({r2},{c2})",
             nameof(delve_tunnel), this_r, this_c, next_r, next_c))
@@ -1792,7 +1793,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// </remarks>
     /// <param name="dungeon"></param>
     /// <returns></returns>
-    Dungeon emplace_stairs(Dungeon dungeon)
+    protected Dungeon emplace_stairs(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(emplace_stairs)))
         {
@@ -1871,7 +1872,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// </code>
     /// <param name="dungeon"></param>
     /// <returns></returns>
-    IEnumerable<StairEnd?> stair_ends(Dungeon dungeon)
+    protected IEnumerable<StairEnd?> stair_ends(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(stair_ends)))
         {
@@ -1934,7 +1935,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// </remarks>
     /// <param name="dungeon"></param>
     /// <returns></returns>
-    Dungeon clean_dungeon(Dungeon dungeon)
+    protected Dungeon clean_dungeon(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(clean_dungeon)))
         {
@@ -1957,7 +1958,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return &collapse_tunnels($dungeon,$p,$close_end);
     /// }
     /// </code>
-    Dungeon remove_deadends(Dungeon dungeon)
+    protected Dungeon remove_deadends(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(remove_deadends)))
         {
@@ -1992,7 +1993,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="p"></param>
     /// <param name="xc"></param>
     /// <returns></returns>
-    Dungeon collapse_tunnels(Dungeon dungeon, double p,
+    protected Dungeon collapse_tunnels(Dungeon dungeon, double p,
         Dictionary<Cardinal, Dictionary<string, ValueTuple<int, int>[]>> xc)
     {
         using (logger.BeginScope(nameof(collapse_tunnels)))
@@ -2048,7 +2049,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $dungeon;
     /// }
     ///</code>
-    Dungeon collapse(Dungeon dungeon, int r, int c, Dictionary<Cardinal, Dictionary<string, ValueTuple<int, int>[]>> xc)
+    protected Dungeon collapse(Dungeon dungeon, int r, int c, Dictionary<Cardinal, Dictionary<string, ValueTuple<int, int>[]>> xc)
     {
         using (logger.BeginScope(nameof(collapse)))
         {
@@ -2127,7 +2128,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <param name="c">anchor col within the map, points in <see cref="check"/> are relative to this</param>
     /// <param name="check"></param>
     /// <returns>true if deletion should occur</returns>
-    bool check_tunnel(Cellbits[,] cell, int r, int c, Dictionary<string, ValueTuple<int, int>[]> check)
+    protected bool check_tunnel(Cellbits[,] cell, int r, int c, Dictionary<string, ValueTuple<int, int>[]> check)
     {
         using (logger.BeginScope(nameof(check_tunnel)))
         {
@@ -2211,7 +2212,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     ///   return $dungeon;
     /// }
     /// </code></remarks>
-    Dungeon fix_doors(Dungeon dungeon)
+    protected Dungeon fix_doors(Dungeon dungeon)
     {
         using (logger.BeginScope(nameof(fix_doors)))
         {
@@ -2262,7 +2263,7 @@ public partial class DungeonGen(ILogger<DungeonGen> logger)
     /// <remarks>only works because initcells is inclusive!
     /// TODO: convert to inclusive logic around n_row/col
     /// </remarks>
-    Dungeon empty_blocks(Dungeon dungeon)
+    protected Dungeon empty_blocks(Dungeon dungeon)
     {
         logger.LogInformation(nameof(empty_blocks));
         dungeon.ForeachInclusive((r, c) =>
@@ -2341,5 +2342,5 @@ public enum Cardinal
 {
     //north, south, east, west 
     east, north, south, west
-    //  e,n,s,w
+    //  e,n,s,w because of `dj_dirs`
 }
