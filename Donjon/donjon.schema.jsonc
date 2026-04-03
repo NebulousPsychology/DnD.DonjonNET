@@ -54,7 +54,42 @@
       }
     },
     "rooms":{ "type": "array"},
-    "settings":{ "type": "object" },
+    "settings":{ 
+      "properties": {
+        "add_stairs":{"type":"string"},
+        "bleed":{"type":"integer"},
+        "cell_size":{"type":"integer"},
+        "corridor_layout":{"type":"string", "enum": ["Labyrinth"]},
+        "door_set":{"type":"string", "enum": ["None"]},
+        "dungeon_layout":{"type":"string", "enum": ["Hexagon"]},
+        "dungeon_size":{"type":"string", "enum": ["Fine"]},
+        "grid":{"type":"string", "enum": ["Square"]},
+        "image_size":{"type":"string"},
+        "infest":{"enum": ["Basic"]},
+        "last_room_id":{"type":"integer"},
+        "level":{"oneOf":[{"type":"integer"}, {"type":"string"}]},
+        "map_cols":{"oneOf":[{"type":"integer"}, {"type":"string"}]},
+        "map_rows":{"oneOf":[{"type":"integer"}, {"type":"string"}]},
+        "map_style":{"type":"string","enum": ["Standard"]},
+        "max_col":{"type":"integer"},
+        "max_row":{"type":"integer"},
+        "motif":{"type":"string","enum": ["Giant"]},
+        "n_cols":{"type":"integer"},
+        "n_i":{"type":"integer"},
+        "n_j":{"type":"integer"},
+        "n_pc":{"oneOf":[{"type":"integer"}, {"type":"string"}]},
+        "n_rooms":{"type":"integer"},
+        "n_rows":{"type":"integer"},
+        "name":{"type":"string"},
+        "peripheral_egress":{"enum": ["Yes","No"]},
+        "remove_deadends":{"enum": ["Some"]},
+        "room_layout":{"enum": ["Scattered"]},
+        "room_polymorph":{"enum": ["Yes","No"]},
+        "room_size":{"enum": ["Small"]},
+        "seed":{"oneOf":[{"type":"integer"}, {"type":"string"}]}
+      },
+      "type": "object"
+    },
     "wandering_monsters":{ "type":"object" }
   }
 }
