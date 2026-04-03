@@ -5,7 +5,7 @@
   "title": "Donjon Map",
   "description": "A product in the catalog",
   "type": "object",
-  "additionalProperties": true,
+  "additionalProperties": false,
   "properties": {
     "cell_bit":{ 
       "type": "object",
@@ -129,7 +129,7 @@
         "max_row":{"type":"integer"},
         "motif":{"type":"string",
         // if Infest == Basic
-          "enum": ["None", "Abandoned",
+          "enum": ["","None", "Abandoned",
             "Aberrant", "Giant", "Undead", "Vermin",
             "Aquatic","Desert","Underdark",
             "Arcane","Fire","Cold","Abyssal","Infernal"
