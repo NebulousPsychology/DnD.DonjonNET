@@ -100,21 +100,41 @@
         "add_stairs":{"type":"string"},
         "bleed":{"type":"integer"},
         "cell_size":{"type":"integer"},
-        "corridor_layout":{"type":"string", "enum": ["Labyrinth"]},
-        "door_set":{"type":"string", "enum": ["None","Basic"]},
-        "dungeon_layout":{"type":"string", "enum": ["Hexagon","Cavernous"]},
-        "dungeon_size":{"type":"string", "enum": ["Fine","Tiny"]},
-        "grid":{"type":"string", "enum": ["Square"]},
+        "corridor_layout":{"type":"string", "enum": ["Labyrinth","Errant","Straight"]},
+        "door_set":{"type":"string", "enum": ["None","Basic","Secure","Standard","Deathtrap"]},
+        "dungeon_layout":{"type":"string", "enum": [
+          "Square","Rectangle","Box","Cross",
+          "Dagger","Saltire","Keep",
+          "Hexagon","Round","Cavernous"]},
+        "dungeon_size":{"type":"string", "enum": [
+          "Fine","Diminutive","Tiny",
+          "Small","Medium","Large","Huge",
+          "Gargantuan","Colossal","Custom"
+          ]},
+        "grid":{"type":"string", "enum": ["Square","Hex","VertHex","None"]},
         "image_size":{"type":"string"},
-        "infest":{"enum": ["Basic"]},
+        "infest":{"enum": ["None","Basic"]},
         "last_room_id":{"type":"integer"},
         "level":{"oneOf":[{"type":"integer"}, {"type":"string"}]},
         "map_cols":{"oneOf":[{"type":"integer"}, {"type":"string"}]},
         "map_rows":{"oneOf":[{"type":"integer"}, {"type":"string"}]},
-        "map_style":{"type":"string","enum": ["Standard", "Steampunk"]},
+        "map_style":{
+          "type":"string",
+          "enum": [
+            "Standard",
+            // ...
+            "Steampunk"
+            ]},
         "max_col":{"type":"integer"},
         "max_row":{"type":"integer"},
-        "motif":{"type":"string","enum": ["Giant", "Vermin"]},
+        "motif":{"type":"string",
+        // if Infest == Basic
+          "enum": ["None", "Abandoned",
+            "Aberrant", "Giant", "Undead", "Vermin",
+            "Aquatic","Desert","Underdark",
+            "Arcane","Fire","Cold","Abyssal","Infernal"
+          ]
+        },
         "n_cols":{"type":"integer"},
         "n_i":{"type":"integer"},
         "n_j":{"type":"integer"},
@@ -122,11 +142,11 @@
         "n_rooms":{"type":"integer"},
         "n_rows":{"type":"integer"},
         "name":{"type":"string"},
-        "peripheral_egress":{"enum": ["Yes","No","Tiling"]},
-        "remove_deadends":{"enum": ["Some"]},
-        "room_layout":{"enum": ["Scattered"]},
-        "room_polymorph":{"enum": ["Yes","No"]},
-        "room_size":{"enum": ["Small","Medium"]},
+        "peripheral_egress":{"enum": ["Yes","No","Many","Tiling"]},
+        "remove_deadends":{"enum": ["None","Some","All"]},
+        "room_layout":{"enum": ["Scattered","Sparse","Dense","Symmetric"]},
+        "room_polymorph":{"enum": ["Yes","No","Many"]},
+        "room_size":{"enum": ["Small","Medium","Large","Huge","Gargantuan","Colossal"]},
         "seed":{"oneOf":[{"type":"integer"}, {"type":"string"}]}
       },
       "type": "object"
