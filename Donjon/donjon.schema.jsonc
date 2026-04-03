@@ -40,7 +40,19 @@
         "walls":{"type": "string" }
       }
     },
-    "egress":{"type": "array"},
+    "egress":{
+      "type": "array",
+      "items": {
+        "type":"object",
+        "properties": {
+          "col":{ "type": "integer" },
+          "row":{ "type": "integer" },
+          "depth":{ "type": "integer" },
+          "dir":{ "enum": ["north","south","east","west"]},
+          "type":{"enum": ["corridor","room"]}
+        }
+      }
+    },
     "rooms":{ "type": "array"},
     "settings":{ "type": "object" },
     "wandering_monsters":{ "type":"object" }
