@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/donjon.schema.json",
+  "title": "Donjon Map",
+  "description": "A product in the catalog",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "cell_bit":{ "type": "object" },
+    "cells":{ "type": "array" },
+    "corridor_features":{ "type": "object" },
+    "details":{ "type": "object" },
+    "egress":{"type": "array"},
+    "rooms":{ "type": "array"},
+    "settings":{ "type": "object" },
+    "wandering_monsters":{ "type":"object" }
+  }
+}
