@@ -28,7 +28,26 @@
       }
     },
     "cells":{ "type": "array", "items": { "type":"array", "items": {"type":"integer"}} },
-    "corridor_features":{ "type":  "object" },
+    "corridor_features":{
+      "type":  "object",
+      "patternProperties": {
+        "^[A-Za-z0-9]+$":{
+          "additionalItems": false,
+          "properties": {
+            "detail":{"type":"string"},
+            "key":{"type":"string"},
+            "marks":{
+              "type":"array",
+              "items": { "properties": {
+                "col":{"type":"integer"},
+                "row":{"type":"integer"}
+              }}
+            },
+            "summary":{"type":"string"}
+          }
+        }
+      }
+    },
     "details":{
       "type": "object",
       "properties": {
