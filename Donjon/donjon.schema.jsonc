@@ -1,12 +1,32 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "https://json-schema.org/draft-07/schema",
+  // "$schema": "https://json-schema.org/draft/2020-12/schema", (insufficient support)
   "$id": "https://example.com/donjon.schema.json",
   "title": "Donjon Map",
   "description": "A product in the catalog",
   "type": "object",
   "additionalProperties": true,
   "properties": {
-    "cell_bit":{ "type": "object" },
+    "cell_bit":{ 
+      "type": "object",
+      "properties": {
+        "aperture":{"type":"integer"},
+        "arch":{"type":"integer"},
+        "block":{"type":"integer"},
+        "door":{"type":"integer"},
+        "label":{"type":"integer"},
+        "locked":{"type":"integer"},
+        "nothing":{"type":"integer"},
+        "perimeter":{"type":"integer"},
+        "portcullis":{"type":"integer"},
+        "room":{"type":"integer"},
+        "room_id":{"type":"integer"},
+        "secret":{"type":"integer"},
+        "stair_down":{"type":"integer"},
+        "stair_up":{"type":"integer"},
+        "trapped":{"type":"integer"}
+      }
+    },
     "cells":{ "type": "array" },
     "corridor_features":{ "type": "object" },
     "details":{ "type": "object" },
