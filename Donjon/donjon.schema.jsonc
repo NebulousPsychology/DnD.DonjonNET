@@ -151,6 +151,18 @@
       },
       "type": "object"
     },
-    "wandering_monsters":{ "type":"object" }
+    "stairs":{
+      "type":"array",
+      "items": {
+        "properties": {
+          "col":{"type":"integer"},
+          "row":{"type":"integer"},
+          "dir":{"enum": ["north","east","south","west"]},
+          "key":{"enum": ["down","up"]}
+        }
+      }
+    },
+    "wandering_monsters":{ "type":"object" },
+    "$schema":true
   }
 }
