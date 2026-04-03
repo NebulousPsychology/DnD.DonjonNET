@@ -53,7 +53,48 @@
         }
       }
     },
-    "rooms":{ "type": "array"},
+    "rooms":{ 
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {"type":"null"},
+          {
+            "type":"object",
+            "properties": {
+              "area":{"type":"integer"},
+              "blocks":{"type":"array"},
+              "cells":{"type":"integer"},
+              "col":{"type":"integer"},
+              "composite":{"type":"integer"},
+              "contents":{
+                "type":"object",
+                "properties": {
+                  "detail":{
+                    "properties": {
+                      "trap":{"type": "array", "items": {"type":"string"}},
+                      "monster":{"type": "array", "items": {"type":"string"}},
+                      "hidden_treasure":{"type": "array", "items": {"type":"string"}},
+                      "room_features":{"type":"string"}
+                    }// /props
+                  },
+                  "inhabited":{"type":"string"},
+                  "summary":{"type":"string"}
+                }
+              },
+              "east":{"type":"integer"},
+              "height":{"type":"integer"},
+              "id":{"type":"string"},
+              "north":{"type":"integer"},
+              "offset":{"type":"number"},
+              "row":{"type":"integer"},
+              "south":{"type":"integer"},
+              "west":{"type":"integer"},
+              "width":{"type":"integer"}
+            }
+          }
+        ]
+      }
+    },
     "settings":{ 
       "properties": {
         "add_stairs":{"type":"string"},
