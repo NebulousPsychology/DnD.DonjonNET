@@ -27,9 +27,19 @@
         "trapped":{"type":"integer"}
       }
     },
-    "cells":{ "type": "array" },
-    "corridor_features":{ "type": "object" },
-    "details":{ "type": "object" },
+    "cells":{ "type": "array", "items": { "type":"array", "items": {"type":"integer"}} },
+    "corridor_features":{ "type":  "object" },
+    "details":{
+      "type": "object",
+      "properties": {
+        "floor":{"type": "string" },
+        "illumination":{"type": "string" },
+        "size":{"type": "string" },
+        "special": { "oneOf":[{"type": "string" }, {"type":"null"}]},
+        "temperature":{"type": "string" },
+        "walls":{"type": "string" }
+      }
+    },
     "egress":{"type": "array"},
     "rooms":{ "type": "array"},
     "settings":{ "type": "object" },
